@@ -1,26 +1,26 @@
 ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,RSSI
-992,Шаболовская 2,md,1417172852995,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172853052,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172854071,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172855116,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172856167,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172857211,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172858222,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172859272,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172860283,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172861316,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172862345,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172863366,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172864384,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172865401,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172866449,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172867490,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172868502,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172869532,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172870573,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172871615,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172872633,unknown,unknown,1.0,-1,-1,-1,-1,-1,-1
-,ServiceLog,md,1417172873644,2G,EDGE,1.0,250,1,770,543,-1,-75
-,ServiceLog,md,1417172874662,2G,EDGE,1.0,250,1,770,543,-1,-75
-,ServiceLog,md,1417172875684,2G,EDGE,1.0,250,1,770,543,-1,-75
-993,Шаболовская 3,md,1417172876065,2G,EDGE,1.0,250,1,770,543,-1,-75
+992,Шаболовская 2,md,1417172852995,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172853052,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172854071,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172855116,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172856167,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172857211,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172858222,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172859272,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172860283,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172861316,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172862345,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172863366,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172864384,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172865401,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172866449,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172867490,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172868502,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172869532,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172870573,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172871615,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172872633,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1417172873644,2G,EDGE,1,250,1,770,543,-1,-75
+,ServiceLog,md,1417172874662,2G,EDGE,1,250,1,770,543,-1,-75
+,ServiceLog,md,1417172875684,2G,EDGE,1,250,1,770,543,-1,-75
+993,Шаболовская 3,md,1417172876065,2G,EDGE,1,250,1,770,543,-1,-75
