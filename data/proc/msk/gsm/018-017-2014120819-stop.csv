@@ -1,0 +1,20 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+172,Университет 2,md,1418055129425,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055129577,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055130629,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055131695,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055132740,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055133799,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055134883,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055135937,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055136977,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055138030,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055139097,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055140149,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055141203,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055142259,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055143315,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055144375,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055145433,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1418055146489,2G,EDGE,1,250,1,660,461,-1,-67
+173,Университет 3,md,1418055146902,2G,EDGE,1,250,1,660,461,-1,-67
