@@ -5,17 +5,19 @@ from collections import namedtuple, Counter
 
 import urllib
 import json
-
+import geojson
 import csv
 
 import pandas as pd
 
 
 # Параметры для получения данных из репозитория
+
 BASE_URL = 'https://api.github.com/repos'
 OWNER = 'nextgis'
 REPO = 'metrocell'
 PATH = 'data/proc/msk/cell'
+GEOJSON_URL = 'https://raw.githubusercontent.com/nextgis/metrocell/master/segments/raw/msk/metro_lines.geojson'
 
 
 class InvalidFileNameError(ValueError):
@@ -23,6 +25,17 @@ class InvalidFileNameError(ValueError):
     """
     pass
 
+
+def get_geojson(url=GEOJSON_URL):
+    """Возвращает geojson, представляющий линии метро и
+    прочитанный из репозиторя github
+    """
+    
+    f = urllib.urlopen(url)
+    data = geojson.loads(f.read())
+    
+    return data
+    
 
 def get_file_list(base_url, owner, repo, path):
     """Возвращает список файлов, хранящихся в репозитории github в 
@@ -130,11 +143,41 @@ def get_stat(description_list):
         
     return Counter(data)
 
+def join_json_stat(json_data, stat):
+    """Расширяет geojson, добавляя к свойствам features
+    статистические данные в формате get_stat.
+
+    Вся "политика" производится тут:
+      имя пользователя удаляется,
+      замеры на станции игнорируются,
+      mnc удаляется
+      network_gen удаляется
+    """
+    features = json_data['features']
+    for feat in features:
+        props = feat['properties']
+        begin_station, end_station = props['CODE'].split('-')
+        description = {}
+        for key, count in stat.iteritems():
+            station1, station2, stop, user, network_gen, mnc, mcc = key
+            if not stop and (station1 == begin_station) and (station2 == end_station):
+                net = str(mcc)   # если политика изменится, нужно будет поменять здесь функцию
+                try:
+                    description[net] += count
+                except KeyError:
+                    description[net] = count
+        props['TRAVELS'] = description
+
+    return json_data
+
+def save_json(data, filename):
+    with open(filename, 'w') as outfile:
+        json.dump(data, outfile)
+
 
 def save_stat(stat, filename):
     """Сохранить собранную статистику в csv файл
     """
-    
     with open(filename, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(['Begin', 'End', 'Stop','User', 'NetworkGen', 'MNC', 'MCC', 'COUNT'])
@@ -142,11 +185,14 @@ def save_stat(stat, filename):
             begin, end, stop, user, NetworkGen, MNC, MCC = key
             writer.writerow([begin, end, stop, user, NetworkGen, MNC, MCC, count])
 
+
 if __name__ == "__main__":
     
-    filename = 'stat.csv'
+    filename = 'segments.json'
     
     files_description = get_file_list(BASE_URL, OWNER, REPO, PATH)
-    c  = get_stat(files_description)
-    save_stat(c, filename)
+    c = get_stat(files_description)
+    json_data = get_geojson()
+    json_data = join_json_stat(json_data, c)
+    save_json(json_data, filename)
     
