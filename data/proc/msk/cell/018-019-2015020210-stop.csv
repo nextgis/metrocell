@@ -1,0 +1,21 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+192,Юго-Западная 2,md,1422861046598,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1422861047442,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1422861048477,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1422861049507,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1422861050521,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1422861051536,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1422861052575,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1422861053617,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,md,1422861054648,2G,EDGE,1,250,1,660,461,-1,0
+,ServiceLog,md,1422861055747,2G,EDGE,1,250,1,660,461,-1,0
+,ServiceLog,md,1422861056764,2G,EDGE,1,250,1,660,461,-1,0
+,ServiceLog,md,1422861057805,2G,EDGE,1,250,1,660,461,-1,-87
+,ServiceLog,md,1422861058849,2G,EDGE,1,250,1,660,461,-1,-87
+,ServiceLog,md,1422861059907,2G,EDGE,1,250,1,660,461,-1,-87
+,ServiceLog,md,1422861060980,2G,EDGE,1,250,1,660,461,-1,-89
+,ServiceLog,md,1422861062027,2G,EDGE,1,250,1,660,461,-1,-89
+,ServiceLog,md,1422861063059,2G,EDGE,1,250,1,660,461,-1,-89
+,ServiceLog,md,1422861064109,2G,EDGE,1,250,1,660,461,-1,-91
+,ServiceLog,md,1422861065145,2G,EDGE,1,250,1,660,461,-1,-91
+193,Юго-Западная 3,md,1422861065992,2G,EDGE,1,250,1,660,461,-1,-91
