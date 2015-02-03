@@ -132,15 +132,25 @@ def describe_file(url_dict):
     
     return result
     
-def get_stat(description_list):
+def get_stat(description_list, print_report=False):
     """Получить статистику поездок по списку словарей, в котором
     хранится описание файлов на гитхабе (возвращается функцией get_file_list)
+
+    print_report выводить ли информацию о процессе сбора данных
     """
     data = []
+    size = len(description_list)
+    i = 0
     for url_desctiption in description_list:
         stat = describe_file(url_desctiption)
         data += stat
-        
+        i += 1
+
+        if print_report:
+            print 'Count: %s / %s' %(i, size)
+
+    if print_report:
+        print 'Updating stats...'
     return Counter(data)
 
 def join_json_stat(json_data, stat):
@@ -150,9 +160,23 @@ def join_json_stat(json_data, stat):
     Вся "политика" производится тут:
       имя пользователя удаляется,
       замеры на станции игнорируются,
-      mnc удаляется
+      mcc удаляется
       network_gen удаляется
     """
+    def get_operator(mnc):
+        station_owner = {99: 'beeline', 2: 'megafon', 1: 'mts'}
+
+        operator = 'unknown'
+        try:
+            mnc = int(mnc)
+        except Error:
+            return operator
+        try:
+            operator = station_owner[mnc]
+        except KeyError:
+            pass
+        return operator
+
     features = json_data['features']
     for feat in features:
         props = feat['properties']
@@ -161,7 +185,7 @@ def join_json_stat(json_data, stat):
         for key, count in stat.iteritems():
             station1, station2, stop, user, network_gen, mnc, mcc = key
             if not stop and (station1 == begin_station) and (station2 == end_station):
-                net = str(mcc)   # если политика изменится, нужно будет поменять здесь функцию
+                net = get_operator(mnc)   # если политика изменится, нужно будет поменять здесь функцию
                 try:
                     description[net] += count
                 except KeyError:
@@ -191,7 +215,7 @@ if __name__ == "__main__":
     filename = 'segments.json'
     
     files_description = get_file_list(BASE_URL, OWNER, REPO, PATH)
-    c = get_stat(files_description)
+    c = get_stat(files_description, print_report=True)
     json_data = get_geojson()
     json_data = join_json_stat(json_data, c)
     save_json(json_data, filename)
