@@ -132,15 +132,25 @@ def describe_file(url_dict):
     
     return result
     
-def get_stat(description_list):
+def get_stat(description_list, print_report=False):
     """Получить статистику поездок по списку словарей, в котором
     хранится описание файлов на гитхабе (возвращается функцией get_file_list)
+
+    print_report выводить ли информацию о процессе сбора данных
     """
     data = []
+    size = len(description_list)
+    i = 0
     for url_desctiption in description_list:
         stat = describe_file(url_desctiption)
         data += stat
-        
+        i += 1
+
+        if print_report:
+            print 'Count: %s / %s' %(i, size)
+
+    if print_report:
+        print 'Updating stats...'
     return Counter(data)
 
 def join_json_stat(json_data, stat):
@@ -191,7 +201,7 @@ if __name__ == "__main__":
     filename = 'segments.json'
     
     files_description = get_file_list(BASE_URL, OWNER, REPO, PATH)
-    c = get_stat(files_description)
+    c = get_stat(files_description, print_report=True)
     json_data = get_geojson()
     json_data = join_json_stat(json_data, c)
     save_json(json_data, filename)
