@@ -160,9 +160,23 @@ def join_json_stat(json_data, stat):
     Вся "политика" производится тут:
       имя пользователя удаляется,
       замеры на станции игнорируются,
-      mnc удаляется
+      mcc удаляется
       network_gen удаляется
     """
+    def get_operator(mnc):
+        station_owner = {99: 'beeline', 2: 'megafon', 1: 'mts'}
+
+        operator = 'unknown'
+        try:
+            mnc = int(mnc)
+        except Error:
+            return operator
+        try:
+            operator = station_owner[mnc]
+        except KeyError:
+            pass
+        return operator
+
     features = json_data['features']
     for feat in features:
         props = feat['properties']
@@ -171,7 +185,7 @@ def join_json_stat(json_data, stat):
         for key, count in stat.iteritems():
             station1, station2, stop, user, network_gen, mnc, mcc = key
             if not stop and (station1 == begin_station) and (station2 == end_station):
-                net = str(mcc)   # если политика изменится, нужно будет поменять здесь функцию
+                net = get_operator(mnc)   # если политика изменится, нужно будет поменять здесь функцию
                 try:
                     description[net] += count
                 except KeyError:
