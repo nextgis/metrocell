@@ -77,6 +77,20 @@ def _is_name_valid(filename):
     return True
     
 
+def get_operator(mnc):
+    station_owner = {99: 'beeline', 2: 'megafon', 1: 'mts'}
+
+    operator = 'unknown'
+    try:
+        mnc = int(mnc)
+    except Error:
+        return operator
+    try:
+        operator = station_owner[mnc]
+    except KeyError:
+        pass
+    return operator
+
 def get_begin_id(filename):
     """По имени файла возвращает id начала сегмента пути
     пример filename: 011-012-2014121214-stop.csv
@@ -105,53 +119,53 @@ def path_is_stop(filename):
         raise InvalidFileNameError
         
     return filename[-8: -4] == 'stop'
-
+    
 
 def describe_file(url_dict):
     """Возвращает список словарей, состоящий из всех уникальных (т.е. без дублирования)
     записей, встреченных в файле.
     На входе -- словарь, возвращаемый функцией get_file_list
-    На выходе -- список из namedtuple('DataValues', ['Begin', 'End', 'Stop','User', 'NetworkGen', 'MNC', 'MCC'])
+    На выходе -- dataframe с колонками ['Begin', 'End', 'Stop','User', 'NetworkGen', 'MNC', 'MCC']
     """
     url = url_dict['download_url']
     filename = url_dict['name']
     begin, end = get_begin_id(filename), get_end_id(filename)
     stop = path_is_stop(filename)
     
-    
     subset = ['User', 'NetworkGen', 'MNC', 'MCC']
-    Record = namedtuple('DataValues', ['Begin', 'End', 'Stop'] + subset)
-    
     frame = pd.io.parsers.read_csv(url)
     frame = frame.drop_duplicates(subset = subset)
+
+    for col in frame.columns:
+        if col not in subset:
+            frame.drop(col, axis=1, inplace=True)
+
+    frame['Begin'] = begin
+    frame['End'] = end
+    frame['Stop'] = stop
     
-    result = []
-    for _, row in frame.iterrows():
-        data = Record(begin, end, stop, row['User'], row['NetworkGen'], row['MNC'], row['MCC'])
-        result.append(data)
-    
-    return result
-    
+    return frame
+
+
 def get_stat(description_list, print_report=False):
     """Получить статистику поездок по списку словарей, в котором
     хранится описание файлов на гитхабе (возвращается функцией get_file_list)
 
     print_report выводить ли информацию о процессе сбора данных
     """
-    data = []
+    data = pd.DataFrame()
     size = len(description_list)
     i = 0
     for url_desctiption in description_list:
-        stat = describe_file(url_desctiption)
-        data += stat
+        frame = describe_file(url_desctiption)
+        data = pd.concat([data, frame])
         i += 1
 
         if print_report:
             print 'Count: %s / %s' %(i, size)
 
-    if print_report:
-        print 'Updating stats...'
-    return Counter(data)
+    return data
+
 
 def join_json_stat(json_data, stat):
     """Расширяет geojson, добавляя к свойствам features
@@ -161,38 +175,30 @@ def join_json_stat(json_data, stat):
       имя пользователя удаляется,
       замеры на станции игнорируются,
       mcc удаляется
-      network_gen удаляется
     """
-    def get_operator(mnc):
-        station_owner = {99: 'beeline', 2: 'megafon', 1: 'mts'}
-
-        operator = 'unknown'
-        try:
-            mnc = int(mnc)
-        except Error:
-            return operator
-        try:
-            operator = station_owner[mnc]
-        except KeyError:
-            pass
-        return operator
 
     features = json_data['features']
     for feat in features:
         props = feat['properties']
         begin_station, end_station = props['CODE'].split('-')
-        description = {}
-        for key, count in stat.iteritems():
-            station1, station2, stop, user, network_gen, mnc, mcc = key
-            if not stop and (station1 == begin_station) and (station2 == end_station):
-                net = get_operator(mnc)   # если политика изменится, нужно будет поменять здесь функцию
-                try:
-                    description[net] += count
-                except KeyError:
-                    description[net] = count
+        
+        description = []
+        filtered = stat[(stat['Stop'] == False) & 
+                        (stat['Begin'] == begin_station) &
+                        (stat['End'] == end_station)]
+        for mnc in filtered.MNC.unique():
+            for ng in filtered.NetworkGen.unique():
+                flt = filtered[(filtered['MNC'] == mnc) &
+                               (filtered['NetworkGen'] == ng)]
+                count = len(flt)
+                if count > 0:
+                    description.append({'operator': get_operator(mnc), 
+                                        'net': ng, 'count': count})
+        
         props['TRAVELS'] = description
 
     return json_data
+
 
 def save_json(data, filename):
     with open(filename, 'w') as outfile:

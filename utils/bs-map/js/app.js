@@ -22,10 +22,17 @@ info.onAdd = function (map) {
 
 
 get_travel_info = function(travel){
-    if (Object.keys(travel).length == 0){
+    if (travel.length == 0){
         s = '---';
     } else{
-        s = '<b>Operators: <br />' + Object.keys(travel)[0] + '</b><br />';
+        s = '';
+        for (i in travel){
+            stat = travel[i];
+            descr = stat['operator'];
+            descr += '/' + stat['net'] + ': ';
+            descr +=  stat['count'] + '<br />';
+            s += descr;
+        };
     }
     return s;
     };
@@ -75,7 +82,7 @@ function onEachFeature(feature, layer) {
 
 function default_style(feature) { 
             var color = "#ff0000";
-            if (Object.keys(feature.properties['TRAVELS']).length == 0) // empty
+            if ((feature.properties['TRAVELS']).length == 0) // empty
                 {
                  color = "#000000"}
             else {
