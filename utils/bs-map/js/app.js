@@ -11,6 +11,43 @@ if(typeof(String.prototype.strip) === "undefined") {
     };
  }
 
+var popupOpts = {
+    autoPanPadding: new L.Point(5, 50),
+    autoPan: true
+};
+
+var points = L.geoCsv (null, {
+    firstLineTitles: true,
+    fieldSeparator: fieldSeparator,
+    pointToLayer: function (feature, latlng) {
+        var iconUrl = 'img/metro.gif';
+        return new L.Marker(latlng, {
+            icon: new L.Icon({
+                iconSize: [16, 16],
+                iconUrl: iconUrl
+            })
+        })
+    },
+    onEachFeature: function (feature, layer) {
+        var popup = '<div class="popup-content"><table class="table table-striped table-bordered table-condensed">';
+        for (var clave in feature.properties) {
+            var title = points.getPropertyTitle(clave).strip();
+            var attr = feature.properties[clave];
+            if (title == labelColumn) {
+                layer.bindLabel(feature.properties[clave], {className: 'map-label'});
+            }
+            if (attr.indexOf('http') === 0) {
+                attr = '<a target="_blank" href="' + attr + '">'+ attr + '</a>';
+            }
+            if (attr) {
+                popup += '<tr><th>'+title+'</th><td>'+ attr +'</td></tr>';
+            }
+        }
+        popup += "</table></popup-content>";
+        layer.bindPopup(popup, popupOpts);
+    }
+});
+points.addTo(map);
 
 var info = L.control();
 
@@ -110,6 +147,16 @@ $(document).ready( function() {
                 metro_lines.addData(data);
             });
         }
-    }).error(function() {});
-    
+    });
+    $.ajax ({
+        type:'GET',
+        dataType:'text',
+        url: stationsUrl,
+        error: function() {
+            console.log('Download error');
+        },
+        success: function(csv) {
+            points.addData(csv);
+        }
+    });
 });
