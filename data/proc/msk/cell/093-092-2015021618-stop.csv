@@ -1,0 +1,24 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+922,Рижская 2,Anna,1424100711792,2G,EDGE,1,0,0,0,-1,-1,-113
+,ServiceLog,Anna,1424100712780,2G,EDGE,1,0,0,0,-1,-1,-113
+,ServiceLog,Anna,1424100713795,2G,EDGE,1,250,2,7763,10293102,-1,-71
+,ServiceLog,Anna,1424100715588,unknown,unknown,1,250,2,7763,10293102,484,-89
+,ServiceLog,Anna,1424100716650,unknown,unknown,1,250,2,7763,10293102,484,-81
+,ServiceLog,Anna,1424100717719,unknown,unknown,1,250,2,7763,10293102,484,-81
+,ServiceLog,Anna,1424100718745,unknown,unknown,1,250,2,7763,10293102,484,-81
+,ServiceLog,Anna,1424100719865,unknown,unknown,1,250,2,7763,10293102,484,-81
+,ServiceLog,Anna,1424100720892,unknown,unknown,1,250,2,7763,10293102,484,-81
+,ServiceLog,Anna,1424100721995,unknown,unknown,1,250,2,7763,10293102,484,-81
+,ServiceLog,Anna,1424100723030,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100724132,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100725166,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100726288,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100727317,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100728426,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100729462,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100730563,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100731591,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100732699,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100733733,unknown,unknown,1,250,2,7763,10293102,484,-83
+,ServiceLog,Anna,1424100734837,unknown,unknown,1,250,2,7763,10293102,484,-83
+923,Рижская 3,Anna,1424100735583,unknown,unknown,1,250,2,7763,10293102,484,-83
