@@ -1,0 +1,36 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+1522,Римская 2,taimyr,1424334599784,2G,EDGE,1,250,99,26627,57817,-1,-65
+,ServiceLog,taimyr,1424334600713,2G,EDGE,1,250,99,26627,57817,-1,-65
+,ServiceLog,taimyr,1424334601757,2G,EDGE,1,250,99,26627,57817,-1,-65
+,ServiceLog,taimyr,1424334602794,2G,EDGE,1,250,99,26627,57817,-1,-65
+,ServiceLog,taimyr,1424334603841,2G,EDGE,1,250,99,26627,57817,-1,-65
+,ServiceLog,taimyr,1424334604867,2G,EDGE,1,250,99,26627,57817,-1,-65
+,ServiceLog,taimyr,1424334605889,2G,EDGE,1,250,99,26627,57817,-1,-65
+,ServiceLog,taimyr,1424334606936,2G,EDGE,1,250,99,26627,57817,-1,-65
+,ServiceLog,taimyr,1424334607983,2G,EDGE,1,250,99,26627,57817,-1,-71
+,ServiceLog,taimyr,1424334609045,2G,EDGE,1,250,99,26627,57817,-1,-71
+,ServiceLog,taimyr,1424334610105,2G,EDGE,1,250,99,26627,57817,-1,-71
+,ServiceLog,taimyr,1424334611152,2G,EDGE,1,250,99,26627,57817,-1,-71
+,ServiceLog,taimyr,1424334612189,unknown,unknown,1,250,99,26627,57817,-1,-75
+,ServiceLog,taimyr,1424334613207,unknown,unknown,1,250,99,26627,57817,-1,-75
+,ServiceLog,taimyr,1424334614241,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334615278,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334616316,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334617350,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334618368,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334619388,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334620437,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334621478,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334622526,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334623561,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334624632,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334625679,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334626699,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334627742,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334628778,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334629840,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334630883,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334631937,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334632988,unknown,unknown,1,250,99,26627,57817,-1,-81
+,ServiceLog,taimyr,1424334634027,unknown,unknown,1,250,99,26627,57817,-1,-81
+1523,Римская 3,taimyr,1424334634523,unknown,unknown,1,250,99,26627,57817,-1,-81
