@@ -1,13 +1,13 @@
+#!/usr/bin/python
 # coding=utf-8
-from ngl_log_handler import NglLogHandler
-from simple_time_strategy import SimpleTimeStrategy
-
 __author__ = 'yellow'
 
-import datetime
+from argparse import ArgumentParser
+
+from ngl_log_handler import NglLogHandler
+from simple_time_strategy import SimpleTimeStrategy
 from coordinate_interpolator import CoordinateInterpolator
 
-from argparse import ArgumentParser
 
 def main():
     # run arguments
