@@ -60,10 +60,11 @@ class NglLogHandler():
         for row in log_entries:
             point = Point(row['x'], row['y'])
 
-            json_stub.features.append({
+            json_stub['features'].append({
                 'type': 'Feature',
                 'geometry': mapping(point),
                 'properties': row
             })
 
-            json.dumps(json_stub)
+        with open(out_file_path, 'w') as log_file:
+            log_file.writelines(json.dumps(json_stub))

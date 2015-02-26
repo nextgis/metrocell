@@ -4,6 +4,7 @@ __author__ = 'yellow'
 
 from os import listdir, path
 from argparse import ArgumentParser
+import sys
 
 from ngl_log_handler import NglLogHandler
 from simple_time_strategy import SimpleTimeStrategy
@@ -46,8 +47,12 @@ def main():
         metro_line_name = path.basename(fname).split('-')
         metro_line_name = '{0}-{1}'.format(metro_line_name[0], metro_line_name[1])
 
-        # georeferencing log rows
-        interpol_entries = SimpleTimeStrategy.georeferencing(metro_line_name, log_entries, interpolator)
+        try:
+            # georeferencing log rows
+            interpol_entries = SimpleTimeStrategy.georeferencing(metro_line_name, log_entries, interpolator)
+        except:
+            print '>Oops!', metro_line_name, sys.exc_value
+            continue
 
         # write out
         if args.mode == SINGLE:
@@ -58,11 +63,15 @@ def main():
 
         # store for geojson
         if args.geojson:
-            all_rows.index(interpol_entries)
+            all_rows.extend(interpol_entries)
 
     # write geojson
     if args.geojson:
-        NglLogHandler.save_as_geojson(args.output_csv+'.geojson', all_rows)
+        if args.mode == SINGLE:
+            output_geojson_path = args.output_csv+'.geojson'
+        else:
+            output_geojson_path = path.join(args.output_csv, 'out.geojson')
+        NglLogHandler.save_as_geojson(output_geojson_path, all_rows)
 
 if __name__ == '__main__':
     main()
