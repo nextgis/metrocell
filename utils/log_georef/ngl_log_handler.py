@@ -1,7 +1,10 @@
 # coding=utf-8
 __author__ = 'yellow'
 
+import json
 import csv
+from shapely.geometry import Point, mapping
+
 
 
 class NglLogHandler():
@@ -36,3 +39,31 @@ class NglLogHandler():
             out_writer = csv.DictWriter(log_file, fieldnames=field_names)
             out_writer.writeheader()
             out_writer.writerows(log_entries)
+
+    @staticmethod
+    def save_as_geojson(out_file_path, log_entries):
+        """
+        Save extended log entries to GeoJson file
+        :param out_file_path: Path to file for saving
+        :param log_entries: [] of dicts with log entries and x, y fields
+        :return: None
+        """
+        if len(log_entries) < 1:
+            return
+
+        json_stub = {
+            'type': 'FeatureCollection',
+            'crs': {'type': 'name', 'properties': {'name': 'urn:ogc:def:crs:EPSG::3857'}},
+            'features': []
+        }
+
+        for row in log_entries:
+            point = Point(row['x'], row['y'])
+
+            json_stub.features.append({
+                'type': 'Feature',
+                'geometry': mapping(point),
+                'properties': row
+            })
+
+            json.dumps(json_stub)
