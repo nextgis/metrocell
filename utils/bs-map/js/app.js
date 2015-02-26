@@ -143,8 +143,8 @@ $(document).ready( function() {
         dataType: "json",
         url: metroLinesURL,
         success: function(data) {
-            $(data.features).each(function(key, data) {
-                metro_lines.addData(data);
+            $(data.features).each(function(key, feat) {
+                metro_lines.addData(feat);
             });
         }
     });
