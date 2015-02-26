@@ -128,6 +128,38 @@ function default_style(feature) {
             return( {color: color, opacity: 1}); 
         } 
 
+
+// Добавим линии по станциям метро
+// Данные будут браться из одного файла
+// а фильтроваться по оператору
+// в момент добавления на карту
+var mts_lines = new L.geoJson(
+    null, 
+    {
+        onEachFeature: onEachFeature,
+        style: default_style
+        
+    });
+mts_lines.addTo(map);
+
+var megafon_lines = new L.geoJson(
+    null, 
+    {
+        onEachFeature: onEachFeature,
+        style: default_style
+        
+    });
+megafon_lines.addTo(map);
+
+var beeline_lines = new L.geoJson(
+    null, 
+    {
+        onEachFeature: onEachFeature,
+        style: default_style
+        
+    });
+beeline_lines.addTo(map);
+
 var metro_lines = new L.geoJson(
     null, 
     {
@@ -137,6 +169,27 @@ var metro_lines = new L.geoJson(
     });
 metro_lines.addTo(map);
 
+var overlayMaps = {
+    "mts": mts_lines,
+    "megafon": megafon_lines,
+    "beeline": beeline_lines,
+    "ALL": metro_lines
+};
+L.control.layers(overlayMaps).addTo(map);
+
+
+function filter_operator(feature, operator){
+    // True, если fetaure содержит информацию об операторе
+    travels = feature.properties['TRAVELS'];
+    for (i in travels){
+            stat = travels[i];
+            if (stat['operator'] == operator){
+                return(true)
+            };
+        };
+    return (false);
+};
+
 
 $(document).ready( function() {
     $.ajax({
@@ -145,6 +198,18 @@ $(document).ready( function() {
         success: function(data) {
             $(data.features).each(function(key, feat) {
                 metro_lines.addData(feat);
+                
+                if (filter_operator(feat, 'mts')){
+                    mts_lines.addData(feat);
+                };
+                
+                if (filter_operator(feat, 'beeline')){
+                    beeline_lines.addData(feat);
+                };
+                
+                if (filter_operator(feat, 'megafon')){
+                    megafon_lines.addData(feat);
+                };
             });
         }
     });
