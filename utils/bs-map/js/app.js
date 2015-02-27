@@ -66,7 +66,7 @@ get_travel_info = function(travel){
         for (i in travel){
             stat = travel[i];
             descr = stat['operator'];
-            descr += '/' + stat['net'] + ': ';
+            descr += ': ';
             descr +=  stat['count'] + '<br />';
             s += descr;
         };

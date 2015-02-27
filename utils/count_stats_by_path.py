@@ -238,13 +238,10 @@ def join_json_stat(json_data, stat):
         filtered.loc[rind, 'MNC'] = [ut[u] for u in (filtered.loc[rind, 'User']) ]
         
         for mnc in filtered.MNC.unique():
-            for ng in filtered.NetworkGen.unique():
-                flt = filtered[(filtered['MNC'] == mnc) &
-                               (filtered['NetworkGen'] == ng)]
-                count = len(flt)
-                if count > 0:
-                    description.append({'operator': get_operator(mnc), 
-                                        'net': ng, 'count': count})
+            flt = filtered[(filtered['MNC'] == mnc)]
+            count = len(flt)
+            description.append({'operator': get_operator(mnc), 
+                                'count': count})
         
         props['TRAVELS'] = description
 
