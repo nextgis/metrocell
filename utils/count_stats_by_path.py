@@ -1,6 +1,9 @@
 #!/bin/env python
 # encoding: utf-8
 
+import glob
+import os
+
 from collections import namedtuple, Counter
 
 import urllib
@@ -57,6 +60,18 @@ def get_file_list(base_url, owner, repo, path):
     
     return flist
     
+def get_local_file_list(path='../data/proc/msk/cell/'):
+    '''Считывает список файлов (логов) из локального каталога
+    '''
+    cur_dir = os.path.dirname(os.path.realpath(__file__))
+    path = os.path.join(cur_dir, path)
+    pattern = path + '/*.csv'
+    
+    return glob.glob(pattern)
+    
+    
+    
+
     
 def _is_name_valid(filename):
     """Простая проверка на то, что filename
@@ -127,8 +142,13 @@ def describe_file(url_dict):
     На входе -- словарь, возвращаемый функцией get_file_list
     На выходе -- dataframe с колонками ['Begin', 'End', 'Stop','User', 'NetworkGen', 'MNC', 'MCC']
     """
-    url = url_dict['download_url']
-    filename = url_dict['name']
+    if type(url_dict) is dict:
+        url = url_dict['download_url']
+        filename = url_dict['name']
+    else:
+        url = url_dict
+        filename = os.path.basename(url)
+        
     begin, end = get_begin_id(filename), get_end_id(filename)
     stop = path_is_stop(filename)
     
@@ -220,7 +240,8 @@ if __name__ == "__main__":
     
     filename = 'segments.json'
     
-    files_description = get_file_list(BASE_URL, OWNER, REPO, PATH)
+    files_description = get_local_file_list()
+    #~ files_description = get_file_list(BASE_URL, OWNER, REPO, PATH)
     c = get_stat(files_description, print_report=True)
     json_data = get_geojson()
     json_data = join_json_stat(json_data, c)
