@@ -23,6 +23,8 @@ PATH = 'data/proc/msk/cell'
 GEOJSON_URL = 'https://raw.githubusercontent.com/nextgis/metrocell/master/segments/raw/msk/metro_lines.geojson'
 
 
+KNOWN_MNC = [99, 1, 2]
+
 class InvalidFileNameError(ValueError):
     """Название файла не соответствует предполагаемому шаблону.
     """
@@ -187,6 +189,26 @@ def get_stat(description_list, print_report=False):
     return data
 
 
+def get_user_table(stat):
+    """Получить информацию о наиболее частом операторе пользователя
+    """
+    x = stat.copy()
+    x.drop(['NetworkGen', 'Begin', 'End', 'Stop'], axis=1, inplace=True)
+    x = x[x['MNC'].isin(KNOWN_MNC)]
+    groups = x.groupby(['User', 'MNC']).size()
+    
+    result = {}
+    users = x['User'].unique()
+    for u in users:
+        mnc = groups[(u)].argmax()
+        result[u] = mnc
+    
+    # User1 is default name, we can't use it for get mnc
+    result['User1'] = -1
+    
+    return result
+    
+
 def join_json_stat(json_data, stat):
     """Расширяет geojson, добавляя к свойствам features
     статистические данные в формате get_stat.
@@ -198,6 +220,9 @@ def join_json_stat(json_data, stat):
     """
 
     features = json_data['features']
+    
+    ut = get_user_table(stat)  # От каких MNC обычно приходят логи пользователей
+    
     for feat in features:
         props = feat['properties']
         begin_station, end_station = props['CODE'].split('-')
@@ -205,7 +230,13 @@ def join_json_stat(json_data, stat):
         description = []
         filtered = stat[(stat['Stop'] == False) & 
                         (stat['Begin'] == begin_station) &
-                        (stat['End'] == end_station)]
+                        (stat['End'] == end_station)].copy()
+          
+        # Заменим неизвестные значения MNC значениями,
+        # от которых обычно логгируется пользователь
+        rind = ~filtered['MNC'].isin(KNOWN_MNC)   # Индексы неизвестных MNC
+        filtered.loc[rind, 'MNC'] = [ut[u] for u in (filtered.loc[rind, 'User']) ]
+        
         for mnc in filtered.MNC.unique():
             for ng in filtered.NetworkGen.unique():
                 flt = filtered[(filtered['MNC'] == mnc) &
