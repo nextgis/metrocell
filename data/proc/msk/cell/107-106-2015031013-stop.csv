@@ -1,0 +1,37 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+1062,Коньково 2,Anna,1425984283673,unknown,unknown,1,250,99,26802,49587,-1,-73
+1062,Коньково 2,Anna,1425984283673,unknown,unknown,250-99-26802-49587,-1,-1,0,-1,-1,-87
+,ServiceLog,Anna,1425984284725,unknown,unknown,1,250,99,26802,49587,-1,-73
+,ServiceLog,Anna,1425984284725,unknown,unknown,250-99-26802-49587,-1,-1,0,-1,-1,-87
+,ServiceLog,Anna,1425984285744,unknown,unknown,1,250,99,26802,49587,-1,-73
+,ServiceLog,Anna,1425984285744,unknown,unknown,250-99-26802-49587,-1,-1,0,-1,-1,-87
+,ServiceLog,Anna,1425984286832,unknown,unknown,1,250,99,26802,49587,-1,-73
+,ServiceLog,Anna,1425984286832,unknown,unknown,250-99-26802-49587,-1,-1,0,-1,-1,-87
+,ServiceLog,Anna,1425984287861,unknown,unknown,1,250,99,26802,49587,-1,-73
+,ServiceLog,Anna,1425984287861,unknown,unknown,250-99-26802-49587,-1,-1,0,-1,-1,-87
+,ServiceLog,Anna,1425984288914,unknown,unknown,1,250,99,26802,49587,-1,-73
+,ServiceLog,Anna,1425984288914,unknown,unknown,250-99-26802-49587,-1,-1,0,-1,-1,-87
+,ServiceLog,Anna,1425984289937,unknown,unknown,1,250,2,7753,1070,-1,-59
+,ServiceLog,Anna,1425984289937,unknown,unknown,250-2-7753-1070,-1,-1,0,-1,-1,-87
+,ServiceLog,Anna,1425984291024,unknown,unknown,250-2-7753-1070,-1,-1,0,-1,-1,-87
+,ServiceLog,Anna,1425984291024,unknown,unknown,1,250,2,7753,1070,-1,-59
+,ServiceLog,Anna,1425984292054,unknown,unknown,1,250,2,7753,1070,-1,-59
+,ServiceLog,Anna,1425984292054,unknown,unknown,250-2-7753-1070,-1,-1,0,-1,-1,-87
+,ServiceLog,Anna,1425984293152,2G,EDGE,1,250,2,7753,1070,-1,-59
+,ServiceLog,Anna,1425984293152,2G,EDGE,250-2-7753-1070,-1,-1,-1,-1,-1,-87
+,ServiceLog,Anna,1425984294178,2G,EDGE,1,250,2,7753,1070,-1,-57
+,ServiceLog,Anna,1425984294178,2G,EDGE,250-2-7753-1070,-1,-1,-1,-1,-1,-87
+,ServiceLog,Anna,1425984295228,2G,EDGE,1,250,2,7753,1070,-1,-57
+,ServiceLog,Anna,1425984295228,2G,EDGE,250-2-7753-1070,-1,-1,-1,-1,-1,-87
+,ServiceLog,Anna,1425984296296,2G,EDGE,1,250,2,7753,1070,-1,-59
+,ServiceLog,Anna,1425984296296,2G,EDGE,250-2-7753-1070,-1,-1,-1,-1,-1,-87
+,ServiceLog,Anna,1425984297401,2G,EDGE,1,250,2,7753,1070,-1,-59
+,ServiceLog,Anna,1425984297401,2G,EDGE,250-2-7753-1070,-1,-1,-1,-1,-1,-87
+,ServiceLog,Anna,1425984298433,2G,EDGE,1,250,2,7753,1070,-1,-53
+,ServiceLog,Anna,1425984298433,2G,EDGE,250-2-7753-1070,-1,-1,-1,-1,-1,-87
+,ServiceLog,Anna,1425984299523,2G,EDGE,1,250,2,7753,1070,-1,-53
+,ServiceLog,Anna,1425984299523,2G,EDGE,250-2-7753-1070,-1,-1,-1,-1,-1,-87
+,ServiceLog,Anna,1425984300557,2G,EDGE,250-2-7753-1070,-1,-1,-1,-1,-1,-87
+,ServiceLog,Anna,1425984300557,2G,EDGE,1,250,2,7753,1070,-1,-53
+1063,Коньково 3,Anna,1425984301622,2G,EDGE,250-2-7753-1070,-1,-1,-1,-1,-1,-87
+1063,Коньково 3,Anna,1425984301622,2G,EDGE,1,250,2,7753,1070,-1,-53
