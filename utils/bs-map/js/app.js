@@ -133,6 +133,7 @@ function default_style(feature) {
 // Данные будут браться из одного файла
 // а фильтроваться по оператору
 // в момент добавления на карту
+
 var mts_lines = new L.geoJson(
     null, 
     {
@@ -179,15 +180,25 @@ L.control.layers(overlayMaps).addTo(map);
 
 
 function filter_operator(feature, operator){
-    // True, если fetaure содержит информацию об операторе
+    // Возвращает копию feature, отфильрованную по оператору:
+    // в travels останутся записи только по указанному оператору;
+    // при operator==ALL, фильтрацию не производить
+    
+    var clone = JSON.parse(JSON.stringify(feature));
+    if (operator=='ALL'){
+        return(clone);
+    };
+    
+    clone.properties['TRAVELS'] = [];
     travels = feature.properties['TRAVELS'];
     for (i in travels){
             stat = travels[i];
             if (stat['operator'] == operator){
-                return(true)
+                clone.properties['TRAVELS'].push(stat);
             };
         };
-    return (false);
+    return (clone);
+    
 };
 
 
@@ -197,19 +208,18 @@ $(document).ready( function() {
         url: metroLinesURL,
         success: function(data) {
             $(data.features).each(function(key, feat) {
-                metro_lines.addData(feat);
+
+                clone = filter_operator(feat, 'mts');
+                mts_lines.addData(clone);
                 
-                if (filter_operator(feat, 'mts')){
-                    mts_lines.addData(feat);
-                };
+                clone = filter_operator(feat, 'beeline');
+                beeline_lines.addData(clone);
                 
-                if (filter_operator(feat, 'beeline')){
-                    beeline_lines.addData(feat);
-                };
+                clone = filter_operator(feat, 'megafon');
+                megafon_lines.addData(clone);
                 
-                if (filter_operator(feat, 'megafon')){
-                    megafon_lines.addData(feat);
-                };
+                clone = filter_operator(feat, 'ALL');
+                metro_lines.addData(clone);
             });
         }
     });
