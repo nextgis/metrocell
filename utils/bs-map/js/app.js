@@ -128,6 +128,14 @@ function default_style(feature) {
             return( {color: color, opacity: 1}); 
         } 
 
+function metering_style(feature) {
+    var color = "#ff5555";
+    return( {color: color, opacity: 1});
+}
+
+
+// Замеры
+var metering_cluster = new L.MarkerClusterGroup();
 
 // Добавим линии по станциям метро
 // Данные будут браться из одного файла
@@ -176,7 +184,12 @@ var overlayMaps = {
     "beeline": beeline_lines,
     "ALL": metro_lines
 };
-L.control.layers(overlayMaps).addTo(map);
+
+var optionalLayers = {
+    "Metering": metering_cluster
+};
+
+L.control.layers(overlayMaps,optionalLayers).addTo(map);
 
 
 function filter_operator(feature, operator){
@@ -211,13 +224,13 @@ $(document).ready( function() {
 
                 clone = filter_operator(feat, 'mts');
                 mts_lines.addData(clone);
-                
+
                 clone = filter_operator(feat, 'beeline');
                 beeline_lines.addData(clone);
-                
+
                 clone = filter_operator(feat, 'megafon');
                 megafon_lines.addData(clone);
-                
+
                 clone = filter_operator(feat, 'ALL');
                 metro_lines.addData(clone);
             });
@@ -232,6 +245,17 @@ $(document).ready( function() {
         },
         success: function(csv) {
             points.addData(csv);
+        }
+    });
+
+    $.ajax({
+        dataType: "json",
+        url: meteringUrl,
+        success: function(data) {
+            var metering_points = L.geoJson(data, {
+            });
+            metering_cluster.addLayer(metering_points);
+
         }
     });
 });
