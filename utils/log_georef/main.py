@@ -62,6 +62,9 @@ def main():
         NglLogHandler.save_as_csv(output_path, interpol_entries)
 
         # store for geojson
+        src_file = path.basename(fname)
+        for entry in interpol_entries:
+            entry['source_file'] = src_file
         if args.geojson:
             all_rows.extend(interpol_entries)
 
