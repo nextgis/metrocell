@@ -22,6 +22,8 @@ def main():
     parser.add_argument('-l', '--lines', type=str, required=True, help='GeoJSON file in EPSG:3857 dissolved by stations')
     parser.add_argument('-m', '--mode', type=str, choices=MODES, default=SINGLE, help='Process one file or dir of files')
     parser.add_argument('-g', '--geojson', action='store_true', help='Write out GeoJSON files with all rows from input CSV files')
+    parser.add_argument('-e', '--exclude-stops', action='store_true', help='Exclude "-stop" files')
+
     parser.add_argument('input_log', type=str, help='DIR or single Log file in CVS format for one segment')
     parser.add_argument('output_csv', type=str, help='DIR or single Result file with coordinates in CSV format')
     args = parser.parse_args()
@@ -36,6 +38,8 @@ def main():
     else:
         for fname in listdir(args.input_log):
             if fname.endswith(".csv"):
+                if args.exclude_stops and '-stop' in fname:
+                    continue
                 input_files.append(path.join(args.input_log, fname))
 
     # iterate input files
