@@ -3,7 +3,7 @@ log_georef
 
 Utility for georeferencing metro logs  
 
-`
+```bash
 usage: main.py [-h] -l LINES [-m {single,batch}] [-g] [-e]
                input_log output_csv
 
@@ -27,4 +27,4 @@ optional arguments:
 
 Example:
 /main.py -e -g -m batch -l ../../segments/raw/msk/metro_lines_disolved_3857.geojson  ../../data/proc/msk/cell/ ~/GIS/metro/out_data/
-`
+```
