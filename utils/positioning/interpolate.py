@@ -99,7 +99,7 @@ def prepare_frame(url, max_lag=16, obs_id=None):
 if __name__ == "__main__":
     dirname = sys.argv[1]
     try:
-        bdname = sys.argv[1]
+        bdname = sys.argv[2]
     except IndexError:
         bdname = 'observ'
 
@@ -110,10 +110,8 @@ if __name__ == "__main__":
         frame = prepare_frame(url, obs_id=obs_id)
         database = pd.concat([database, frame])
         obs_id += 1
-    # database.to_csv(os.path.basename('database.csv'), index=False)
 
     engine = create_engine('sqlite:///' + bdname + '.db')
-
     database.to_sql(bdname, engine, flavor='sqlite', index=False)
 
 
