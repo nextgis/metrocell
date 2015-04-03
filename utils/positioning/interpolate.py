@@ -6,7 +6,7 @@
 (1 секунда) и запись их в единую БД формата sqlite.
 
 Вызов:
-    python interpolate.py out_data/
+    python interpolate.py out_data/ observation
 где out_data -- каталог, содержащий логи, обработанные инструментом log_georef
 '''
 
@@ -98,9 +98,10 @@ def prepare_frame(url, max_lag=16, obs_id=None):
 
 if __name__ == "__main__":
     dirname = sys.argv[1]
-
-    #~ import ipdb
-    #~ ipdb.set_trace()
+    try:
+        bdname = sys.argv[1]
+    except IndexError:
+        bdname = 'observ'
 
     database = pd.DataFrame()
     file_list = get_local_file_list(dirname)
@@ -111,9 +112,9 @@ if __name__ == "__main__":
         obs_id += 1
     # database.to_csv(os.path.basename('database.csv'), index=False)
 
-    engine = create_engine('sqlite:///obcervations.db')
+    engine = create_engine('sqlite:///' + bdname + '.db')
 
-    database.to_sql('observ', engine, flavor='sqlite', index=False)
+    database.to_sql(bdname, engine, flavor='sqlite', index=False)
 
 
 
