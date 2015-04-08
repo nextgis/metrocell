@@ -23,6 +23,8 @@ PATH = 'data/proc/msk/cell'
 GEOJSON_URL = 'https://raw.githubusercontent.com/nextgis/metrocell/master/segments/raw/msk/metro_lines.geojson'
 
 
+RESULTFILE = 'bs-map/data/segments.json'
+
 KNOWN_MNC = [99, 1, 2]
 
 class InvalidFileNameError(ValueError):
@@ -266,12 +268,10 @@ def save_stat(stat, filename):
 
 if __name__ == "__main__":
 
-    filename = 'segments.json'
-
     files_description = get_local_file_list()
     #~ files_description = get_file_list(BASE_URL, OWNER, REPO, PATH)
     c = get_stat(files_description, print_report=True)
     json_data = get_geojson()
     json_data = join_json_stat(json_data, c)
-    save_json(json_data, filename)
+    save_json(json_data, RESULTFILE)
 
