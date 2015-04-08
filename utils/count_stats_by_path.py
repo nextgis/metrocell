@@ -35,22 +35,22 @@ def get_geojson(url=GEOJSON_URL):
     """Возвращает geojson, представляющий линии метро и
     прочитанный из репозиторя github
     """
-    
+
     f = urllib.urlopen(url)
     data = geojson.loads(f.read())
-    
+
     return data
-    
+
 
 def get_file_list(base_url, owner, repo, path):
-    """Возвращает список файлов, хранящихся в репозитории github в 
+    """Возвращает список файлов, хранящихся в репозитории github в
     указанном каталоге
     """
     url = '/'.join(['https://api.github.com/repos', owner, repo, 'contents', path])
-    
+
     f = urllib.urlopen(url)
     flist = json.loads(f.read())
-    
+
     # Отрежем лишнюю информацию:
     flist = [{
                 'name': f['name'],
@@ -59,40 +59,40 @@ def get_file_list(base_url, owner, repo, path):
             }
             for f in flist
     ]
-    
+
     return flist
-    
-def get_local_file_list(path='../data/proc/msk/cell/'):
+
+def get_local_file_list(path='../' + PATH):
     '''Считывает список файлов (логов) из локального каталога
     '''
     cur_dir = os.path.dirname(os.path.realpath(__file__))
     path = os.path.join(cur_dir, path)
     pattern = path + '/*.csv'
-    
-    return glob.glob(pattern)
-    
-    
-    
 
-    
+    return glob.glob(pattern)
+
+
+
+
+
 def _is_name_valid(filename):
     """Простая проверка на то, что filename
     является подходящим именем файла для логов
-    пример "хорошего" filename: 
+    пример "хорошего" filename:
         011-012-2014121214.csv
         011-012-2014121214-stop.csv
     """
     if filename[-4:] != '.csv':
         return False
-    
+
     if not (filename[:3]+filename[4:7]).isdigit():
         return False
-    
+
     if filename[3] != '-':
         return False
-    
+
     return True
-    
+
 
 def get_operator(mnc):
     station_owner = {99: 'beeline', 2: 'megafon', 1: 'mts'}
@@ -114,7 +114,7 @@ def get_begin_id(filename):
     """
     if not _is_name_valid(filename):
         raise InvalidFileNameError
-    
+
     return filename[:3]
 
 
@@ -124,7 +124,7 @@ def get_end_id(filename):
     """
     if not _is_name_valid(filename):
         raise InvalidFileNameError
-    
+
     return filename[4:7]
 
 
@@ -134,9 +134,9 @@ def path_is_stop(filename):
     """
     if not _is_name_valid(filename):
         raise InvalidFileNameError
-        
+
     return filename[-8: -4] == 'stop'
-    
+
 
 def describe_file(url_dict):
     """Возвращает список словарей, состоящий из всех уникальных (т.е. без дублирования)
@@ -150,10 +150,10 @@ def describe_file(url_dict):
     else:
         url = url_dict
         filename = os.path.basename(url)
-        
+
     begin, end = get_begin_id(filename), get_end_id(filename)
     stop = path_is_stop(filename)
-    
+
     subset = ['User', 'NetworkGen', 'MNC', 'MCC']
     frame = pd.io.parsers.read_csv(url)
     frame = frame.drop_duplicates(subset = subset)
@@ -165,7 +165,7 @@ def describe_file(url_dict):
     frame['Begin'] = begin
     frame['End'] = end
     frame['Stop'] = stop
-    
+
     return frame
 
 
@@ -196,18 +196,18 @@ def get_user_table(stat):
     x.drop(['NetworkGen', 'Begin', 'End', 'Stop'], axis=1, inplace=True)
     x = x[x['MNC'].isin(KNOWN_MNC)]
     groups = x.groupby(['User', 'MNC']).size()
-    
+
     result = {}
     users = x['User'].unique()
     for u in users:
         mnc = groups[(u)].argmax()
         result[u] = mnc
-    
+
     # User1 is default name, we can't use it for get mnc
     result['User1'] = -1
-    
+
     return result
-    
+
 
 def join_json_stat(json_data, stat):
     """Расширяет geojson, добавляя к свойствам features
@@ -220,29 +220,29 @@ def join_json_stat(json_data, stat):
     """
 
     features = json_data['features']
-    
+
     ut = get_user_table(stat)  # От каких MNC обычно приходят логи пользователей
-    
+
     for feat in features:
         props = feat['properties']
         begin_station, end_station = props['CODE'].split('-')
-        
+
         description = []
-        filtered = stat[(stat['Stop'] == False) & 
+        filtered = stat[(stat['Stop'] == False) &
                         (stat['Begin'] == begin_station) &
                         (stat['End'] == end_station)].copy()
-          
+
         # Заменим неизвестные значения MNC значениями,
         # от которых обычно логгируется пользователь
         rind = ~filtered['MNC'].isin(KNOWN_MNC)   # Индексы неизвестных MNC
         filtered.loc[rind, 'MNC'] = [ut[u] for u in (filtered.loc[rind, 'User']) ]
-        
+
         for mnc in filtered.MNC.unique():
             flt = filtered[(filtered['MNC'] == mnc)]
             count = len(flt)
-            description.append({'operator': get_operator(mnc), 
+            description.append({'operator': get_operator(mnc),
                                 'count': count})
-        
+
         props['TRAVELS'] = description
 
     return json_data
@@ -265,13 +265,13 @@ def save_stat(stat, filename):
 
 
 if __name__ == "__main__":
-    
+
     filename = 'segments.json'
-    
+
     files_description = get_local_file_list()
     #~ files_description = get_file_list(BASE_URL, OWNER, REPO, PATH)
     c = get_stat(files_description, print_report=True)
     json_data = get_geojson()
     json_data = join_json_stat(json_data, c)
     save_json(json_data, filename)
-    
+
