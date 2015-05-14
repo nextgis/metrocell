@@ -46,6 +46,10 @@ class SimpleTimeStrategy():
             new_entry['x'] = log_entry_point.x
             new_entry['y'] = log_entry_point.y
 
+            new_entry['segment_start_id'] = line_id.split('-')[0]
+            new_entry['segment_end_id'] = line_id.split('-')[1]
+            new_entry['ration'] = time_ratio
+
             new_entries.append(new_entry)
 
         return new_entries
