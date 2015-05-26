@@ -50,14 +50,14 @@ def main():
         # get line id by name of file
         metro_line_name = path.basename(fname).split('-')
         metro_line_name = '{0}-{1}'.format(metro_line_name[0], metro_line_name[1])
-
+       
         try:
             # georeferencing log rows
             interpol_entries = SimpleTimeStrategy.georeferencing(metro_line_name, log_entries, interpolator)
         except:
             print '>Oops!', metro_line_name, sys.exc_value
             continue
-
+   
         # write out
         if args.mode == SINGLE:
             output_path = args.output_csv
