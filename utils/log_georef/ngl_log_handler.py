@@ -53,7 +53,7 @@ class NglLogHandler():
 
         json_stub = {
             'type': 'FeatureCollection',
-            'crs': {'type': 'name', 'properties': {'name': 'urn:ogc:def:crs:EPSG::3857'}},
+            'crs': {'type': 'name', 'properties': {'name': 'urn:ogc:def:crs:EPSG::4326'}},
             'features': []
         }
 

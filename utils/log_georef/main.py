@@ -6,6 +6,7 @@ from os import listdir, path
 from argparse import ArgumentParser
 import sys
 
+from dbase import Dbase
 from ngl_log_handler import NglLogHandler
 from simple_time_strategy import SimpleTimeStrategy
 from coordinate_interpolator import CoordinateInterpolator
@@ -29,6 +30,7 @@ def main():
     args = parser.parse_args()
 
     interpolator = CoordinateInterpolator(args.lines, 'CODE')
+    dbase = Dbase(args.output_csv)
     all_rows = []
 
     # get input files for processing
@@ -46,14 +48,14 @@ def main():
     for fname in input_files:
         # get log rows
         log_entries = NglLogHandler.get_log_entries(fname)
-
+        
         # get line id by name of file
         metro_line_name = path.basename(fname).split('-')
         metro_line_name = '{0}-{1}'.format(metro_line_name[0], metro_line_name[1])
        
         try:
             # georeferencing log rows
-            interpol_entries = SimpleTimeStrategy.georeferencing(metro_line_name, log_entries, interpolator)
+            interpol_entries = SimpleTimeStrategy.georeferencing(metro_line_name, log_entries, interpolator,dbase)
         except:
             print '>Oops!', metro_line_name, sys.exc_value
             continue
@@ -79,6 +81,9 @@ def main():
         else:
             output_geojson_path = path.join(args.output_csv, 'out.geojson')
         NglLogHandler.save_as_geojson(output_geojson_path, all_rows)
+
+    #close connection with database
+    dbase.connection.close()
 
 if __name__ == '__main__':
     main()

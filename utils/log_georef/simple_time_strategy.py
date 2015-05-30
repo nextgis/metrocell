@@ -12,8 +12,10 @@ class SimpleTimeStrategy():
     with simple linear time strategy
     """
 
+
+
     @staticmethod
-    def georeferencing(line_id, line_log_entries, point_interpolator):
+    def georeferencing(line_id, line_log_entries, point_interpolator, database):
         """
         Georeferencing log rows !for one segment! on any layer using interpolator
         :param line_id: id of segment
@@ -62,5 +64,10 @@ class SimpleTimeStrategy():
             new_entry['ration'] = dist_ratio
 
             new_entries.append(new_entry)
-            
+
+            database.connection.cursor().execute('INSERT INTO log_points(x,y,active,power,ration,mcc,mnc,lac,cid,psc,seg_begin,seg_end) '
+                                                 'VALUES(:x,:y,:Active,:Power,:ration,:MCC,:MNC,:LAC,:CID,:PSC,:segment_start_id,:segment_end_id)',
+                                                 new_entry)
+            database.connection.commit()
+
         return new_entries

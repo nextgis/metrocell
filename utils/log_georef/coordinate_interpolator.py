@@ -3,9 +3,10 @@ __author__ = 'yellow'
 
 import json
 from shapely.geometry import shape
+from shapely.ops import transform
 import math
-#from datetime import datetime
-#from segment_info import SegmentInfo
+from functools import partial
+import pyproj
 
 class CoordinateInterpolator():
 
@@ -23,6 +24,11 @@ class CoordinateInterpolator():
         self.dist_delta = 0
         self.passed_accel = 0
         self.passed_const = 0
+        self.project = partial(
+            pyproj.transform,
+            pyproj.Proj(init = 'epsg:3857'),
+            pyproj.Proj(init = 'epsg:4326')
+        )
         # read lines
         with open(segments_geojson_path, 'r') as lines_file:
             lines_json = json.load(lines_file)
@@ -91,9 +97,12 @@ class CoordinateInterpolator():
         """
         if line_id not in self._lines_feats.keys():
             raise IndexError("Where is no object with such ID: %s" % line_id)
-#убрать строку и оставить get length
+
         line_length = self.get_segment_length(line_id)
 		
         point_linear_offset = line_length * ratio
         point = self._lines_feats[line_id].interpolate(point_linear_offset)
-        return point
+        #transformation to wgs-84
+        point2 = transform(self.project,point)
+
+        return point2
