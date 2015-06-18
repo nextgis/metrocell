@@ -43,13 +43,17 @@ class Averaging():
         MoveDf.to_csv(paths.preLogPointsPath)
         # 3. Mean pre-processed data
         self.iterateBySegment(MoveDf)
-        self.aver_df.to_csv(paths.saveCellSmoothed + "Cells_smoothed_unref-" + str(self.base_step) + ".csv")
+
         #print (self.qualities)
         #print (self.aver_df)
         # 4. post georeferencing
         self.aver_df['x'] = self.aver_df.apply(lambda x:self.interpolator.interpolate_by_ratio(x['segment'],x['ratio'],0).x,axis = 1)
         self.aver_df['y'] = self.aver_df.apply(lambda x:self.interpolator.interpolate_by_ratio(x['segment'],x['ratio'],0).y,axis = 1)
+        self.aver_df.to_csv(paths.saveCellSmoothed + str(self.base_step) + ".csv")
+
         self.aver_df.drop(self.dropnames,inplace = True, axis = 1)
+        for id in ['segment_start_id','segment_end_id']:
+            self.aver_df[id] = self.aver_df[id].apply(int)
         # push smoothed dataframe into the sqlite database
         db = Dbase(paths.output_db,key = "")
         db.connection.text_factory = str

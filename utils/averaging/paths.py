@@ -10,7 +10,7 @@ preLogPointsPath = path.join(project_path,"data\\referenced\\msk\\cell\\pre_log_
     #test
 testSegmentPath = path.join(project_path,"data\\118-227-2015031016.csv")
 #output to averaging
-saveCellSmoothed = path.join(project_path,"data\\")
+saveCellSmoothed = path.join(project_path,"data\\Cells_smoothed_ref-")
 output_db = path.join(project_path,"data")
 tabname = "cell_log_points"
 #input lines
