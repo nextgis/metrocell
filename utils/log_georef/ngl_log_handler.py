@@ -3,9 +3,8 @@ __author__ = 'yellow'
 
 import json
 import csv
+import pandas as pd
 from shapely.geometry import Point, mapping
-
-
 
 class NglLogHandler():
     """
@@ -34,11 +33,8 @@ class NglLogHandler():
         """
         if len(log_entries) < 1:
             return
-        field_names = log_entries[0].keys()  # need more right version (fields position!!!)
-        with open(out_log_file_path, 'w') as log_file:
-            out_writer = csv.DictWriter(log_file, fieldnames=field_names)
-            out_writer.writeheader()
-            out_writer.writerows(log_entries)
+        Df = pd.DataFrame(data = log_entries,dtype = 'str')
+        Df.to_csv(out_log_file_path)
 
     @staticmethod
     def save_as_geojson(out_file_path, log_entries):
