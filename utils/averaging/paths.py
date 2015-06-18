@@ -7,6 +7,7 @@ project_path = "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\"
 inputMovesPath = path.join(project_path,"data\\referenced\\msk\\cell\\log_points.csv")
 inputStopsPath = path.join(project_path,"data\\referenced\\msk\\cell\\log_points-stops.csv")
 preLogPointsPath = path.join(project_path,"data\\referenced\\msk\\cell\\pre_log_points.csv")
+preLogPointsPathStop = path.join(project_path,"data\\referenced\\msk\\cell\\pre_log_points-stops.csv")
     #test
 testSegmentPath = path.join(project_path,"data\\118-227-2015031016.csv")
 #output to averaging

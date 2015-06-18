@@ -40,7 +40,9 @@ class Averaging():
         # 2. Pre-processing of input referenced dataframe,according to the phone parameters
 
         MoveDf = self.preproc_.proc_cell_df(MoveDf,users = ['sasfeat'])
+        StopDf = self.preproc_.proc_cell_df(StopDf,users = ['sasfeat'])
         MoveDf.to_csv(paths.preLogPointsPath)
+        StopDf.to_csv(paths.preLogPointsPathStop)
         # 3. Mean pre-processed data
         self.iterateBySegment(MoveDf)
 
