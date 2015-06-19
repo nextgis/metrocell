@@ -1,9 +1,13 @@
 import pandas as pd
+import geopy
 class Utils():
     def __init__(self):
         return
-    def unique(self,df,param):
-        return list(df[param].drop_duplicates())
+    def unique(self,df,param,type = "all"):
+        l = list(df[param].drop_duplicates())
+        if type == "one":
+            l = l[0]
+        return l
     def getBoundaries(self,df,numOfPts):
         dict = {}
         lc_ratios = list(df['ratio'])

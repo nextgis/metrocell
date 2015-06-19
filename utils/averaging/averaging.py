@@ -52,7 +52,7 @@ class Averaging():
         # 4. post georeferencing
         self.aver_df['x'] = self.aver_df.apply(lambda x:self.interpolator.interpolate_by_ratio(x['segment'],x['ratio'],0).x,axis = 1)
         self.aver_df['y'] = self.aver_df.apply(lambda x:self.interpolator.interpolate_by_ratio(x['segment'],x['ratio'],0).y,axis = 1)
-        self.aver_df.to_csv(paths.saveCellSmoothed + str(self.base_step) + ".csv")
+        self.aver_df.to_csv(paths.saveCellSmoothed)
 
         # push smoothed dataframe into the sqlite database
         if self.push ==True :
