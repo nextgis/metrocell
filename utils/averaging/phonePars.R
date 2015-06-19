@@ -2,7 +2,7 @@ setwd("~/GitHub/metrocell/data/referenced/msk/cell")
 df = read.csv("pre_log_points-stops.csv",sep = ",")
 setwd("~/GitHub/metrocell/data/")
 smoothed = read.csv("Cells_smoothed_ref-200.csv",sep = ",")
-saveFolder = "stats/plots/powers"
+saveFolder = "C:/temp/plots/stats"
 
 library(ggplot2)
 

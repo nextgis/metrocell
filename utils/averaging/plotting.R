@@ -37,9 +37,9 @@ library(ggplot2)
 inputdfPath <- "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\data\\Cells_smoothed_unref-200.csv"
 #inputdfPath <- "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\data\\referenced\\msk\\cell\\pre_log_points.csv"
 
-saveCellFolderSmooth <- "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\data\\plots\\msk\\smoothed"
-saveCellFolder <- "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\data\\plots\\msk\\referenced/byCells"
-saveUserFolder <- "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\data\\plots\\msk\\referenced/byUsers"
+saveCellFolderSmooth <- "C:\\temp\\plots\\smoothed"
+saveCellFolder <- "C:\\temp\\plots\\referenced/byCells"
+saveUserFolder <- "C:\\temp\\plots\\referenced/byUsers"
 ###########
 #binding csv - files at folder
 df<-process_csv(inputdfPath)
