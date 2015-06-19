@@ -49,7 +49,7 @@ class Smooth():
             t_train, t_test, y_train, y_test = cross_validation.train_test_split(t, y, test_size=test_size, random_state=1)
             quality = best_q = -1000000
             best_params = (None, None)
-            max_iter = min(len(t_train), 15)
+            max_iter = min(len(t_train), 50)
             for n_count in range(1, max_iter):
                 for w in self.weights:
                     model = neighbors.KNeighborsRegressor(n_neighbors = n_count,algorithm = self.algorithm,weights = w)

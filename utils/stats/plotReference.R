@@ -1,9 +1,3 @@
-process_csv<-function(dfPath){
-  df<-read.table(dfPath,header = TRUE, sep = ",",encoding = 'UTF-8')
-  df$lc_qual<-paste(as.character(df$laccid),as.character(df$quality),sep=" : ")
-  return(df)
-}
-
 #########
 #by laccid
 #########
@@ -23,27 +17,16 @@ User_by_segmnets<-function(df,saveFolder)
     ggsave(filename = paste(seg,".png"),plot = power2,path = saveFolder)
   }
 
-Cell_by_segmnetsSmooth<-function(df,saveFolder)
-  for (seg in unique(df$segment)){
-    seg_df = df[df$segment == seg,]
-    power<-ggplot(seg_df,aes(x=ratio,y=Power,colour = lc_qual))+ggtitle(paste("Segment ",seg_df$segment[1], sep= ':'))+theme(plot.title = element_text(face = 'bold'))
-    power2<-power+geom_line(size=1.5,aes(linetype = NetworkGen))+facet_grid(NetworkType~.)
-    ggsave(filename = paste(seg,".png"),plot = power2,path = saveFolder)
-  }
 
 ######################################################################################
 library(ggplot2)
 ###paths###
-inputdfPath <- "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\data\\Cells_smoothed_unref-200.csv"
-#inputdfPath <- "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\data\\referenced\\msk\\cell\\pre_log_points.csv"
-
-saveCellFolderSmooth <- "C:\\temp\\plots\\smoothed"
+inputdfPath <- "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\data\\referenced\\msk\\cell\\pre_log_points.csv"
 saveCellFolder <- "C:\\temp\\plots\\referenced/byCells"
 saveUserFolder <- "C:\\temp\\plots\\referenced/byUsers"
 ###########
-#binding csv - files at folder
-df<-process_csv(inputdfPath)
+df<-read.table(dfPath,header = TRUE, sep = ",",encoding = 'UTF-8')
 #plots
-#Cell_by_segments(df, saveCellFolder)
-#User_by_segmnets(df, saveUserFolder)
-Cell_by_segmnetsSmooth(df,saveCellFolderSmooth)
+Cell_by_segments(df, saveCellFolder)
+User_by_segmnets(df, saveUserFolder)
+

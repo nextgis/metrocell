@@ -1,5 +1,6 @@
 import paths
 import pandas as pd
+import sys
 from utils import Utils
 from geojsonC import GeojsonConn
 from pointInterpolator import PointInterpolator
@@ -20,7 +21,7 @@ class Averaging():
         self.geojsonConn = GeojsonConn(paths.segments_geojson_path,'CODE')
         self.power = Smooth(unique_names = self.unique_names)
         self.interpolator = PointInterpolator(self.geojsonConn)
-
+        self.push = True
         return
 
     def main(self):
@@ -53,14 +54,15 @@ class Averaging():
         self.aver_df['y'] = self.aver_df.apply(lambda x:self.interpolator.interpolate_by_ratio(x['segment'],x['ratio'],0).y,axis = 1)
         self.aver_df.to_csv(paths.saveCellSmoothed + str(self.base_step) + ".csv")
 
-        self.aver_df.drop(self.dropnames,inplace = True, axis = 1)
-        for id in ['segment_start_id','segment_end_id']:
-            self.aver_df[id] = self.aver_df[id].apply(int)
         # push smoothed dataframe into the sqlite database
-        db = Dbase(paths.output_db,key = "")
-        db.connection.text_factory = str
-        self.aver_df.to_sql(paths.tabname,con = db.connection)
-        db.connection.close()
+        if self.push ==True :
+            self.aver_df.drop(self.dropnames,inplace = True, axis = 1)
+            for id in ['segment_start_id','segment_end_id']:
+                self.aver_df[id] = self.aver_df[id].apply(int)
+            db = Dbase(paths.output_db,key = "")
+            db.connection.text_factory = str
+            self.aver_df.to_sql(paths.tabname,con = db.connection)
+            db.connection.close()
 
     def iterateBySegment(self,MoveDf):
         """
@@ -69,22 +71,28 @@ class Averaging():
         :return:
         """
         segments = self.ut.unique(MoveDf,'segment')
+        seg_len = len(segments)
+        print("Segments in processing..")
         for seg in segments:
+            sys.stdout.write("\r"+(str(segments.index(seg)+1)+"/"+str(seg_len)))
+            sys.stdout.flush()
             self.qualities[seg] = {}
             seg_df = MoveDf[MoveDf['segment'] == seg]
             segment_length = self.geojsonConn.get_segment_length(seg)
             numOfPts = segment_length/self.base_step + 1
             seg_laccid_list = self.ut.unique(seg_df,'laccid')
+
             for laccid in seg_laccid_list:
+
                 laccid_df = seg_df[seg_df['laccid']==laccid]
-                min_lc_ratio,max_lc_ratio,levels_num = self.ut.getBoundaries(laccid_df,numOfPts)
-                if levels_num>5:
+                levels = self.ut.getBoundaries(laccid_df,numOfPts)
+                if levels!={}:
                     try:
                         smoothed_laccid_df,quality = self.power.smooth(laccid_df,
                                                                           func = 'Power',
-                                                                          min_lc_ratio = min_lc_ratio,
-                                                                          max_lc_ratio = max_lc_ratio,
-                                                                          levels_num = levels_num,
+                                                                          min_lc_ratio = levels['min_lc_ratio'],
+                                                                          max_lc_ratio = levels['max_lc_ratio'],
+                                                                          levels_num = levels['levels_num'],
                                                                           test_size = 0.4
                                                                           )
                     except:
