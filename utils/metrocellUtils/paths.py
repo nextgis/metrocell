@@ -14,9 +14,10 @@ testSegmentPath = path.join(project_path,"data\\118-227-2015031016.csv")
 saveCellSmoothed = path.join(project_path,"data\\Cells_smoothed_ref-200.csv")
 output_db = path.join(project_path,"data")
 tabname = "cell_log_points"
+#output to subway information
+subwayInfo = path.join(project_path,"data\\subwayInfo")
 #input lines
 segments_geojson_path = path.join(project_path,"segments\\raw\\msk\\metro_lines_dissolved_3857.geojson")
 #output for plots
 saveCellFolder = path.join(project_path,"data\\plots\\msk\\referenced\\by_cells\\")
-
 

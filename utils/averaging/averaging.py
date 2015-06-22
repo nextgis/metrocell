@@ -10,14 +10,16 @@ from dbase import Dbase
 
 class Averaging():
     def __init__(self):
+        # meters
         self.base_step = 200
+        # seconds
+        self.base_step_time = 1
         self.aver_df = pd.DataFrame()
         self.qualities = {}
         self.dropnames = ['NumRaces','NumUsers','laccid','segment','quality','weight']
         self.unique_names = ['segment','NetworkType','NetworkGen','LAC','CID','laccid','segment_start_id','segment_end_id']
         #instances
         self.ut = Utils()
-        self.preproc_ = Preproc()
         self.geojsonConn = GeojsonConn(paths.segments_geojson_path,'CODE')
         self.power = Smooth(unique_names = self.unique_names)
         self.interpolator = PointInterpolator(self.geojsonConn)
@@ -40,10 +42,12 @@ class Averaging():
         """
         # 2. Pre-processing of input referenced dataframe,according to the phone parameters
 
-        MoveDf = self.preproc_.proc_cell_df(MoveDf,users = ['sasfeat'])
-        StopDf = self.preproc_.proc_cell_df(StopDf,users = ['sasfeat'])
+        MoveDf = Preproc.proc_cell_df(MoveDf,users = ['sasfeat'])
+        StopDf = Preproc.proc_cell_df(StopDf,users = ['sasfeat'])
+        self.SubwayInfoDf = Preproc.computeAverTime(MoveDf,push = False)
         MoveDf.to_csv(paths.preLogPointsPath)
         StopDf.to_csv(paths.preLogPointsPathStop)
+
         # 3. Mean pre-processed data
         self.iterateBySegment(MoveDf)
 
@@ -56,6 +60,7 @@ class Averaging():
 
         # push smoothed dataframe into the sqlite database
         if self.push ==True :
+            
             self.aver_df.drop(self.dropnames,inplace = True, axis = 1)
             for id in ['segment_start_id','segment_end_id']:
                 self.aver_df[id] = self.aver_df[id].apply(int)
@@ -78,13 +83,22 @@ class Averaging():
             sys.stdout.flush()
             self.qualities[seg] = {}
             seg_df = MoveDf[MoveDf['segment'] == seg]
-            segment_length = self.geojsonConn.get_segment_length(seg)
-            numOfPts = segment_length/self.base_step + 1
+            # compute the number of points for each segment
+
+            # the number of points = full length of the segment / by the base step
+            # segment_length = self.geojsonConn.get_segment_length(seg)
+            # numOfPts = segment_length/self.base_step + 1
+
+            # full time on the segment / base time step
+            pathTime = self.SubwayInfoDf.loc[seg]['pathTime']
+            numOfPts = pathTime/self.base_step_time
+
             seg_laccid_list = self.ut.unique(seg_df,'laccid')
 
             for laccid in seg_laccid_list:
 
                 laccid_df = seg_df[seg_df['laccid']==laccid]
+                # get left and right boundaries(min and max) where this signal was detected
                 levels = self.ut.getBoundaries(laccid_df,numOfPts)
                 if levels!={}:
                     try:

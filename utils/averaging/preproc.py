@@ -1,8 +1,11 @@
 import pandas as pd
+import numpy as np
+import paths
 class Preproc():
     def __init__(self):
         return
-    def proc_cell_df(self,df,users = []):
+    @staticmethod
+    def proc_cell_df(df,users = []):
         """
         :param dfPath: 'path to georeferenced -csv file'
         :param users: list of users with 'bad phones'
@@ -39,3 +42,34 @@ class Preproc():
                       ]
 
         return(procdf)
+    @staticmethod
+    def computeAverTime(df,push = False):
+        """
+        Find a mean path time for each segment.
+        :param df: input georeferenced dataframe
+        :param push: if True push result to CSV
+        :return: dataframe with columns : segment | pathTime | stdev
+        """
+        pathTime = pd.DataFrame()
+        # find minimum and maximum times for each segment by each race
+        r_b = df.groupby(['segment','race_id'])['TimeStamp'].max()
+        l_b = df.groupby(['segment','race_id'])['TimeStamp'].min()
+        # compute path times for each race
+        delta_ts = (r_b-l_b)/1000
+        # compute the means of path times for each segment.
+        # Note! "level == 0" means that mean function applied to segments,
+        # whereas level = 1 - applied to race_id
+        pathTime['pathTime'] = delta_ts.groupby(level = 0).mean()
+        # compute standart deviation
+        pathTime['stdev'] = delta_ts.groupby(level = 0).apply(np.std)
+
+        pathTime['stdev'] = pathTime['stdev'].apply(lambda x: float("%.2f"%x))
+        pathTime['pathTime'] = pathTime['pathTime'].apply(lambda x: float("%.1f"%x))
+
+        if push == True:
+            pathTime.to_csv(paths.subwayInfo)
+        return pathTime
+if __name__ == "__main__":
+    Df = pd.io.parsers.read_csv(paths.preLogPointsPath)
+    delta_ts = Preproc.computeAverTime(Df)
+    print delta_ts

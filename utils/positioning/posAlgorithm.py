@@ -1,6 +1,7 @@
 __author__ = 'Alex'
 
 import pandas as pd
+import numpy as np
 import paths
 import random
 import itertools
@@ -13,6 +14,8 @@ class PosAlgorithm():
         # original database
         self.SmoothedDf = pd.io.parsers.read_csv(paths.saveCellSmoothed)
         self.predicted_df = None
+        # minimum range of grabbed sample
+        self.range_min = 10
         # by default the number of unpredicted segments is 0
         self.unpredicted = 0
         # The number of laccids,grabbed by user. For "byLacCidMod" algorithm it must be more then 2.
@@ -45,7 +48,6 @@ class PosAlgorithm():
         segments = list(suits.keys())
         self.randSeg = random.sample(segments,1)
 
-
     def getTests(self):
         """
         Get the dataframe grabbed by user.
@@ -53,7 +55,17 @@ class PosAlgorithm():
         """
         df = self.SmoothedDf [self.SmoothedDf['segment'].isin(self.randSeg)]
         lc_list = self.ut.unique(df,'laccid')
-        df = df[df['laccid'].isin(random.sample(lc_list,self.numLC-1))]
+        #df = df[df['laccid'].isin(random.sample(lc_list,self.numLC-1))]
+        # generate test slice
+        while True:
+            i = random.sample(df,1)
+            j = random.sample(df,1)
+            delta = np.abs(i-j)
+            if delta > self.range_min:
+                range = sorted(sum([i,j],[]))
+                df = df.loc[range[0]:range[1]]
+                break
+
         return df
     def randomSampling(self,df,numsamples = 50):
         """
@@ -105,3 +117,13 @@ class PosAlgorithm():
         # if no segments - use the segments from base algorithm.
         else:
             self.unpredicted = 1
+    def byAbdPowerCorr(self):
+        """
+        The input segment should contains varying of signal. Only in this case
+        it is possible to identify truth position
+        :return: predicted data frame.
+        """
+        # suppose that user's telephone grabbed not only the base station but neighbours too
+        self.byLacCidMod()
+        # 1. Split phone data on base step's sections.
+        # 2. Compute the correlation iteratively

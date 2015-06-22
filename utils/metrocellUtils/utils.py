@@ -9,6 +9,12 @@ class Utils():
             l = l[0]
         return l
     def getBoundaries(self,df,numOfPts):
+        """
+
+        :param df:
+        :param numOfPts:
+        :return:
+        """
         dict = {}
         lc_ratios = list(df['ratio'])
         min_lc_ratio,max_lc_ratio = min(lc_ratios),max(lc_ratios)
@@ -16,5 +22,5 @@ class Utils():
         if delta_ratios>0.2:
             dict['min_lc_ratio'] = min_lc_ratio
             dict['max_lc_ratio'] = max_lc_ratio
-            dict['levels_num'] = int(max_lc_ratio*numOfPts)
+            dict['levels_num'] = int(delta_ratios*numOfPts)
         return dict
