@@ -17,6 +17,7 @@ class Estimator():
         :param outputs: which algorithms need to execute
         :return: prints several numbers for each algorithm
         """
+        print("Mean maxima-errors(meters):")
         for out in outputs:
             # list of errors.Error - distance delta from the truth point
             self.errors = []
@@ -32,17 +33,20 @@ class Estimator():
                 # the number of unpredicted segments.
                 # Unpredicted segment is the segment that do not have full set of laccids,
                 # grabbed by user into this moment. That means, that database is not full.
-                self.unpredicted=0
+                self.unpredicted = 0
                 self.byLacCidMod()
+            if out == "byPowerCorr":
+                self.unpredicted = 0
+                self.byPowerCorr()
         return
     def random(self):
         """
         The simplest - grab random points
         :return:
         """
-        print("Mean maxima-errors(meters):")
+
         print("--Random--")
-        for i in range(1,self.iters):
+        for i in range(0,self.iters):
             randomAlg = PosAlgorithm(type = "lc")
             randomAlg.randomSampling(randomAlg.SmoothedDf)
             #error
@@ -96,6 +100,21 @@ class Estimator():
         print (str(unpr_per)+"%")
         print ("false segments:" + str(self.falseSegs))
         print ("true segments:" + str(self.trueSegs))
+    def byPowerCorr(self):
+        for i in range(0,self.iters):
+            byPowerCorr = PosAlgorithm(type = "lc")
+            byPowerCorr.byPowerCorr()
+            #error
+            error,predictedSeg = Estimator.byLatLong(byPowerCorr.predicted_df,
+                                                     byPowerCorr.truthPoint,
+                                                     byPowerCorr.predicted_segments)
+            self.errors.append(error)
+            self.trueSegs+=predictedSeg['trueSeg']
+            self.falseSegs+=predictedSeg['falseSeg']
+        print("--By byPowerCorr--")
+        print (np.mean(self.errors))
+        print ("false segments:" + str(self.falseSegs))
+        print ("true segments:" + str(self.trueSegs))
     @staticmethod
     def byLatLong(predictedDf,truthPoint,truthSegments = None):
         predictedSegs = {'trueSeg':0,'falseSeg':999999}
@@ -112,8 +131,8 @@ class Estimator():
         error = float("%.1f"%error)
         return error,predictedSegs
 if __name__ =="__main__":
-    #parameters
-    outputs = ["random","byLacCid","byLacCidMod"]
+    #parameters "byLacCid","byLacCidMod"
+    outputs = ["byPowerCorr"]
     iters = 50
     #instance
     estimator = Estimator(iters = iters)
