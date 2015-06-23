@@ -9,7 +9,12 @@ import itertools
 from utils import Utils
 
 class PosAlgorithm():
-    def __init__(self,type = "random"):
+    def __init__(self,range_min = 5,
+                 timeStep = 1,
+                 numLC = 4,
+                 minCorrcoeff = 0.8,
+                 corrDelta = 0.1,
+                 LCshape = 6):
         self.ut = Utils()
         # original database
         self.SmoothedDf = pd.io.parsers.read_csv(paths.saveCellSmoothed)
@@ -17,33 +22,26 @@ class PosAlgorithm():
         self.ImitDb = pd.io.parsers.read_csv(paths.preLogPointsPath)
         # output database contained predicted points
         self.predicted_df = None
-        # minimum range of grabbed samples
-        self.range_min = 5
         # by default the number of unpredicted segments is 0
         self.unpredicted = 0
+        # minimum range between indexes of grabbed section
+        self.range_min = range_min
         # the time step as constant step between rows at the database
-        self.timeStep = 1
+        self.timeStep = timeStep
         # The number of laccids,grabbed by user. For "byLacCidMod" algorithm it must be more then 2.
         # Otherwise, it will works as "byLacCid" algorithm
-        self.numLC = 4
-        # minimum of the correlation coefficient
-        self.corrcoeff = 0.8
+        self.numLC = numLC
+        # minimum of the correlation coefficient for byPowerCorr algorithm
+        self.minCorrcoeff = minCorrcoeff
+        # delta error of correlation coefficient
+        self.corrDelta = corrDelta
+        # size of dataset for grabbed dataframe grouped by laccid
+        self.LCshape = LCshape
         # initialize self.segments variable
         self.generateRandomSegment()
-        self.grabbedDf = self.initAlg(type = type)
+        self.grabbedDf = self.getTestSection()
         self.truthPoint = self.randomSampling(self.grabbedDf,numsamples = 1)
-    def initAlg(self,type = "lc"):
-        """
-        initialize the algorithm of positioning.
-        :param type: the type of dataframe grabbed by user.
-        "lc" - using laccids info.
-        "random" - randomly
-        :return:
-        """
-        if type == "random":
-            return self.randomSampling(self.ImitDb,numsamples = 50)
-        if type == "lc":
-            return self.getTests()
+
     def generateRandomSegment(self):
         """
         Generate segment where user located.
@@ -55,7 +53,7 @@ class PosAlgorithm():
         segments = list(suits.keys())
         self.randSeg = random.sample(segments,1)
 
-    def getTests(self):
+    def getTestSection(self):
         """
         Get the dataframe grabbed by user.
         :return:
@@ -72,9 +70,21 @@ class PosAlgorithm():
                 Range = sorted(sum([i,j],[]))
                 df = df.loc[Range[0]:Range[1]]
                 break
-
-
         return df
+    def predict(self,alg):
+        """
+        initialize the algorithm of postiioning prediction.
+        :param alg: keyword for algoruthm
+        :return:
+        """
+        if alg == "r":
+            self.randomSampling(self.SmoothedDf)
+        if alg == "lc":
+            self.byLacCid()
+        if alg == "lcM":
+            self.byLacCidMod()
+        if alg == "pc":
+            self.byPowerCorr()
     def randomSampling(self,df,numsamples = 50):
         """
         Generate subset from input dataframe.
@@ -104,6 +114,7 @@ class PosAlgorithm():
         # because this means that in the first case 4 cell's stations were founded correctly, when
         # in the second case only 2. But it might be lack of the data in origin database.
         predicted_segments =[]
+        self.unpredicted = 0
         # get predicted frame and segments according base laccid algorithm
         self.byLacCid()
         # iterate by laccids into grabbed list of laccids.
@@ -131,6 +142,7 @@ class PosAlgorithm():
         it is possible to identify truth position
         :return: predicted data frame.
         """
+        self.unpredicted = 0
         predictedDf = pd.DataFrame()
         predictedIndexes = []
         # suppose that user's telephone grabbed not only the base station but neighbours too
@@ -141,29 +153,31 @@ class PosAlgorithm():
         # 2. Compute the correlation iteratively
         powersDf = self.predicted_df.groupby(['segment','laccid'])
         for ((seg,lc),SegLcGroup) in powersDf:
-            i = 0
-            # window wide
-            ww = len(self.interpPowers[lc])
-            while (i+ww)<=SegLcGroup.shape[0]:
-                # move along indexes at the database and compare section from it
-                # with grabbed section
-                trueSection = np.array(SegLcGroup[i:i+ww]['Power'])
-                #print len(trueSection),len(self.interpPowers[lc])
-                corrcoef = np.corrcoef(trueSection,self.interpPowers[lc])[0,1]
-                if abs(corrcoef) > self.corrcoeff:
+            # compute correlation only if grabbed dataset for this laccid more than default size
+            if SegLcGroup.shape[0] > self.LCshape:
+                i = 0
+                # window wide
+                ww = len(self.interpPowers[lc])
+                while (i+ww)<=SegLcGroup.shape[0]:
+                    # move along indexes at the database and compare section from it
+                    # with grabbed section
+                    trueSection = np.array(SegLcGroup[i:i+ww]['Power'])
+                    # print len(trueSection),len(self.interpPowers[lc])
+                    corrcoef = np.corrcoef(trueSection,self.interpPowers[lc])[0,1]
+                    #if corrcoef > self.minCorrcoeff:
                     predictedIndexes.append(([i,i+ww],corrcoef))
-                i+=1
-        slices = [l for (l,coeff) in predictedIndexes]
-        #slices = sum(slices,[])
-        #slices = sorted(list(set(slices)))
+                    i+=1
+
+        coeffs = [coeff for (l,coeff) in predictedIndexes]
+        minCoeff = max(coeffs) - self.corrDelta
+        slices = [l for (l,coeff) in predictedIndexes if coeff > minCoeff]
+
         for i in range(0,len(slices)):
             predictedDf = pd.concat([predictedDf,self.predicted_df[slices[i][0]:slices[i][1]]])
         if predictedDf.empty != True:
             predictedDf = predictedDf.drop_duplicates()
             self.predicted_df = predictedDf
-        #print predictedIndexes
-        #print (slices)
-        #print(self.predicted_df)
+
             self.predicted_segments = list(self.predicted_df['segment'].unique())
         else:
             self.unpredicted = 1
@@ -186,5 +200,5 @@ class PosAlgorithm():
                                          old[lc],
                                          self.grabbedDf.loc[self.grabbedDf['laccid'] == lc, 'Power'])
 if __name__ == "__main__":
-    powerCorr = PosAlgorithm(type = "lc")
+    powerCorr = PosAlgorithm()
     powerCorr.byPowerCorr()

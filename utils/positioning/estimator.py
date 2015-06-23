@@ -3,120 +3,62 @@ __author__ = 'Alex'
 from geopy.distance import vincenty
 #import numpy as np
 import pandas as pd
-import numpy as np
-#import paths
+import sys
+
+import paths
 from posAlgorithm import PosAlgorithm
 
 class Estimator():
-    def __init__(self,iters):
+    def __init__(self,iters,algs):
         # iteration limit for each algorithm. After finish find the mean of maximum error.
         self.iters = iters
-    def main(self,outputs):
+        self.algs = algs
+    def main(self):
         """
         Initialize algorithms of estimation.
         :param outputs: which algorithms need to execute
         :return: prints several numbers for each algorithm
         """
-        print("Mean maxima-errors(meters):")
-        for out in outputs:
-            # list of errors.Error - distance delta from the truth point
-            self.errors = []
-            # the number of true and false segments:
-            # True segment is the segment that contains user's position
-            # False segment is the segment that do not contains user's position
-            self.trueSegs,self.falseSegs = 0,0
-            if out == "random":
-                self.random()
-            if out == "byLacCid":
-                self.byLaccid()
-            if out == "byLacCidMod":
-                # the number of unpredicted segments.
-                # Unpredicted segment is the segment that do not have full set of laccids,
-                # grabbed by user into this moment. That means, that database is not full.
+        StatsDf = pd.DataFrame()
+        for iter in range(0,self.iters):
+            sys.stdout.write("\r" + str(iter) + "/" + str(self.iters))
+            sys.stdout.flush()
+            # initialize a situation
+            self.alg = PosAlgorithm()
+            for alg in self.algs.keys():
                 self.unpredicted = 0
-                self.byLacCidMod()
-            if out == "byPowerCorr":
-                self.unpredicted = 0
-                self.byPowerCorr()
+                # estimate statistics using the algorithm
+                statsRow = self.estimateAlgorithm(alg = alg,iter = iter)
+                # write it into the table
+                StatsDf = pd.concat([StatsDf,statsRow])
+        StatsDf_ix = StatsDf.set_index([range(0,self.iters*len(self.algs.keys()))])
+        #print("Mean maxima-errors(meters):")
+        StatsDf_ix.to_csv(paths.estimDf)
+        print StatsDf_ix
         return
-    def random(self):
-        """
-        The simplest - grab random points
-        :return:
-        """
 
-        print("--Random--")
-        for i in range(0,self.iters):
-            randomAlg = PosAlgorithm(type = "lc")
-            randomAlg.randomSampling(randomAlg.SmoothedDf)
-            #error
-            error,predictedSeg= Estimator.byLatLong(randomAlg.predicted_df,
-                                                    randomAlg.truthPoint)
-            self.errors.append(error)
+    def estimateAlgorithm(self,alg,iter):
+        stats = {"alg":alg,"iter":iter}
 
-        print (np.mean(self.errors))
-    def byLaccid(self):
-        """
-        Use Lac and Cid identifiers of Base station only.
-        :return:
-        """
-        for i in range(0,self.iters):
-            byLaccid = PosAlgorithm(type = "lc")
-            byLaccid.byLacCid()
-            #error
-            error,predictedSeg = Estimator.byLatLong(byLaccid.predicted_df,
-                                                     byLaccid.truthPoint,
-                                                     byLaccid.predicted_segments)
-            self.errors.append(error)
-            self.trueSegs+=predictedSeg['trueSeg']
-            self.falseSegs+=predictedSeg['falseSeg']
-        print("--By LACCID--")
-        print (np.mean(self.errors))
-        print ("false segments:" + str(self.falseSegs))
-        print ("true segments:" + str(self.trueSegs))
-    def byLacCidMod(self):
-        """
-        Use the information from neighbours laccids.
-        :return:
-        """
+        self.alg.predict(alg = alg)
+        # error - distance delta from the truth point
+        # predictedSeg contains the number of true and false segments:
+        # True segment is the segment that contains user's position
+        # False segment is the segment that do not contains user's position
+        stats['error'],predictedSeg = Estimator.byLatLong(self.alg.predicted_df,
+                                                 self.alg.truthPoint,
+                                                 self.alg.predicted_segments)
 
-        for i in range(0,self.iters):
-            byLaccidMod = PosAlgorithm(type = "lc")
-            byLaccidMod.byLacCidMod()
-            self.unpredicted += byLaccidMod.unpredicted
-            #error
-            error,predictedSeg = Estimator.byLatLong(byLaccidMod.predicted_df,
-                                                     byLaccidMod.truthPoint,
-                                                     byLaccidMod.predicted_segments)
-            self.errors.append(error)
-
-            self.trueSegs+=predictedSeg['trueSeg']
-            self.falseSegs+=predictedSeg['falseSeg']
-        # percent of unpredicted segments
-        unpr_per = self.unpredicted/self.iters
-        print("--By LACCID Modified--")
-        print (np.mean(self.errors))
-        print ("Persent of unpredicted segments:")
-        print (str(unpr_per)+"%")
-        print ("false segments:" + str(self.falseSegs))
-        print ("true segments:" + str(self.trueSegs))
-    def byPowerCorr(self):
-        for i in range(0,self.iters):
-            byPowerCorr = PosAlgorithm(type = "lc")
-            byPowerCorr.byPowerCorr()
-            #error
-            error,predictedSeg = Estimator.byLatLong(byPowerCorr.predicted_df,
-                                                     byPowerCorr.truthPoint,
-                                                     byPowerCorr.predicted_segments)
-            self.errors.append(error)
-            self.trueSegs+=predictedSeg['trueSeg']
-            self.falseSegs+=predictedSeg['falseSeg']
-        print("--By byPowerCorr--")
-        print (np.mean(self.errors))
-        print ("false segments:" + str(self.falseSegs))
-        print ("true segments:" + str(self.trueSegs))
+        # Unpredicted segment is the segment that do not have full set of laccids,
+        # grabbed by user into this moment. That means, that database is not full.
+        stats['unpr'] = self.unpredicted
+        stats.update(predictedSeg)
+        stats = {i:[stats[i]] for i in stats.keys()}
+        statsRow = pd.DataFrame.from_dict(stats)
+        return statsRow
     @staticmethod
     def byLatLong(predictedDf,truthPoint,truthSegments = None):
+        # error = None
         predictedSegs = {'trueSeg':0,'falseSeg':999999}
         if truthSegments!=None:
             if truthPoint[truthPoint['segment'].isin(truthSegments)].shape[0]==1:
@@ -131,10 +73,11 @@ class Estimator():
         error = float("%.1f"%error)
         return error,predictedSegs
 if __name__ =="__main__":
-    #parameters "byLacCid","byLacCidMod"
-    outputs = ["byPowerCorr"]
-    iters = 50
+    #parameters
+    # ,"r":"random"
+    algorithms = {"lc":"by LACCID","lcM":"by LACCID with neighbours","pc":"by Power correlation"}
+    iters = 5
     #instance
-    estimator = Estimator(iters = iters)
+    estimator = Estimator(iters = iters,algs = algorithms)
     #initialize estimation algorithms
-    estimator.main(outputs)
+    estimator.main()
