@@ -14,7 +14,8 @@ class PosAlgorithm():
                  numLC = 4,
                  minCorrcoeff = 0.8,
                  corrDelta = 0.1,
-                 LCshape = 6):
+                 LCshape = 6,
+                 windowStep = 1):
         self.ut = Utils()
         # original database
         self.SmoothedDf = pd.io.parsers.read_csv(paths.saveCellSmoothed)
@@ -24,6 +25,8 @@ class PosAlgorithm():
         self.predicted_df = None
         # by default the number of unpredicted segments is 0
         self.unpredicted = 0
+        # range of indexes at the test data frame
+        self.Range = None
         # minimum range between indexes of grabbed section
         self.range_min = range_min
         # the time step as constant step between rows at the database
@@ -31,15 +34,18 @@ class PosAlgorithm():
         # The number of laccids,grabbed by user. For "byLacCidMod" algorithm it must be more then 2.
         # Otherwise, it will works as "byLacCid" algorithm
         self.numLC = numLC
-        # minimum of the correlation coefficient for byPowerCorr algorithm
+        # minimum of the correlation coefficient (only for byPowerCorr algorithm)
         self.minCorrcoeff = minCorrcoeff
-        # delta error of correlation coefficient
+        # delta error of correlation coefficient (only for byPowerCorr algorithm)
         self.corrDelta = corrDelta
-        # size of dataset for grabbed dataframe grouped by laccid
+        # size of data set for grabbed data frame grouped by laccid
         self.LCshape = LCshape
+        # step over which the coefficient of correlation will be computed (only for byPowerCorr algorithm)
+        self.windowStep = windowStep
         # initialize self.segments variable
         self.generateRandomSegment()
         self.grabbedDf = self.getTestSection()
+
         self.truthPoint = self.randomSampling(self.grabbedDf,numsamples = 1)
 
     def generateRandomSegment(self):
@@ -67,9 +73,14 @@ class PosAlgorithm():
             j = random.sample(df.index,1)
             delta = np.abs(i[0]-j[0])
             if delta > self.range_min:
-                Range = sorted(sum([i,j],[]))
-                df = df.loc[Range[0]:Range[1]]
-                break
+                self.Range = sorted(sum([i,j],[]))
+                df = df.loc[self.Range[0]:self.Range[1]]
+                # extract laccid only if grabbed dataset for this laccid more than default size
+                d = df.groupby(['laccid']).apply(len).to_dict()
+                LCs = [lc for lc in d.keys() if d[lc]>self.LCshape]
+                df = df[df['laccid'].isin(LCs)]
+                if df.empty == False:
+                    break
         return df
     def predict(self,alg):
         """
@@ -109,7 +120,7 @@ class PosAlgorithm():
         Use the information from neighbours laccids.
         :return:
         """
-        #Note! Attach probability according  length of founded laccids at each step.
+        #Note! Attach probability according  length of founded laccids for each step.
         # For example,probability for sublist with length 4 more than siblist with length 2,
         # because this means that in the first case 4 cell's stations were founded correctly, when
         # in the second case only 2. But it might be lack of the data in origin database.
@@ -144,7 +155,8 @@ class PosAlgorithm():
         """
         self.unpredicted = 0
         predictedDf = pd.DataFrame()
-        predictedIndexes = []
+
+        Slices = []
         # suppose that user's telephone grabbed not only the base station but neighbours too
 
         self.byLacCidMod()
@@ -153,31 +165,36 @@ class PosAlgorithm():
         # 2. Compute the correlation iteratively
         powersDf = self.predicted_df.groupby(['segment','laccid'])
         for ((seg,lc),SegLcGroup) in powersDf:
-            # compute correlation only if grabbed dataset for this laccid more than default size
-            if SegLcGroup.shape[0] > self.LCshape:
-                i = 0
-                # window wide
-                ww = len(self.interpPowers[lc])
-                while (i+ww)<=SegLcGroup.shape[0]:
-                    # move along indexes at the database and compare section from it
-                    # with grabbed section
-                    trueSection = np.array(SegLcGroup[i:i+ww]['Power'])
-                    # print len(trueSection),len(self.interpPowers[lc])
-                    corrcoef = np.corrcoef(trueSection,self.interpPowers[lc])[0,1]
-                    #if corrcoef > self.minCorrcoeff:
-                    predictedIndexes.append(([i,i+ww],corrcoef))
-                    i+=1
+            predictedIndexes = []
+            i = 0
+            # window wide
+            ww = len(self.interpPowers[lc])
+            while (i+ww)<=SegLcGroup.shape[0]:
+                # move along indexes at the database and compare section from it
+                # with grabbed section
+                trueSection = np.array(SegLcGroup[i:i+ww]['Power'])
+                # print len(trueSection),len(self.interpPowers[lc])
+                corrcoef = np.corrcoef(trueSection,self.interpPowers[lc])[0,1]
+                #if corrcoef > self.minCorrcoeff:
+                predictedIndexes.append(([i,i+ww],corrcoef))
+                i+=self.windowStep
+            # compute maximum coefficient of correlation
+            coeffs = [coeff for (l,coeff) in predictedIndexes]
+            # find the minumal limit for coefficient of correlation
+            coeffs = list(set(coeffs))
+            if (coeffs!=[np.nan]) and (coeffs!=[]):
+                minCoeff = max(coeffs) - self.corrDelta
+                # extract indexes by condition
+                slices = [l for (l,coeff) in predictedIndexes if coeff > minCoeff]
+                if slices!=[]:
+                    Slices= Slices + slices
 
-        coeffs = [coeff for (l,coeff) in predictedIndexes]
-        minCoeff = max(coeffs) - self.corrDelta
-        slices = [l for (l,coeff) in predictedIndexes if coeff > minCoeff]
-
-        for i in range(0,len(slices)):
-            predictedDf = pd.concat([predictedDf,self.predicted_df[slices[i][0]:slices[i][1]]])
+        for i in range(0,len(Slices)):
+            predictedDf = pd.concat([predictedDf,self.predicted_df[Slices[i][0]:Slices[i][1]]])
         if predictedDf.empty != True:
+            # exclude duplicates(rows that are intersected)
             predictedDf = predictedDf.drop_duplicates()
             self.predicted_df = predictedDf
-
             self.predicted_segments = list(self.predicted_df['segment'].unique())
         else:
             self.unpredicted = 1

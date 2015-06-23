@@ -21,7 +21,7 @@ class Estimator():
         """
         StatsDf = pd.DataFrame()
         for iter in range(0,self.iters):
-            sys.stdout.write("\r" + str(iter) + "/" + str(self.iters))
+            sys.stdout.write("\r" + str(iter+1) + "/" + str(self.iters))
             sys.stdout.flush()
             # initialize a situation
             self.alg = PosAlgorithm()
@@ -46,8 +46,7 @@ class Estimator():
         # True segment is the segment that contains user's position
         # False segment is the segment that do not contains user's position
         stats['error'],predictedSeg = Estimator.byLatLong(self.alg.predicted_df,
-                                                 self.alg.truthPoint,
-                                                 self.alg.predicted_segments)
+                                                          self.alg.truthPoint)
 
         # Unpredicted segment is the segment that do not have full set of laccids,
         # grabbed by user into this moment. That means, that database is not full.
@@ -57,26 +56,30 @@ class Estimator():
         statsRow = pd.DataFrame.from_dict(stats)
         return statsRow
     @staticmethod
-    def byLatLong(predictedDf,truthPoint,truthSegments = None):
+    def byLatLong(predictedDf,truthPoint):
         # error = None
-        predictedSegs = {'trueSeg':0,'falseSeg':999999}
-        if truthSegments!=None:
-            if truthPoint[truthPoint['segment'].isin(truthSegments)].shape[0]==1:
-                predictedSegs['trueSeg'] = 1
-            predictedSegs['falseSeg'] = len(truthSegments)-1
+        predictedSegs = {'trueSeg':0,'falseSeg':None}
+        predSegs = list(predictedDf['segment'].unique())
+        if list(truthPoint['segment'])[0] in predSegs:
+            predictedSegs['trueSeg'] = 1
+        predictedSegs['falseSeg'] = len(predSegs)- predictedSegs['trueSeg']
+
         test = pd.DataFrame()
         truth = zip(truthPoint['x'],truthPoint['y'])
 
         test['xy'] = zip(predictedDf['x'],predictedDf['y'])
         distances = test.apply(lambda df:vincenty(truth,df['xy']).meters,axis = 1)
         error = max(distances)
-        error = float("%.1f"%error)
+        try:
+            error = float("%.1f"%error)
+        except:
+            print error,distances
         return error,predictedSegs
 if __name__ =="__main__":
     #parameters
     # ,"r":"random"
     algorithms = {"lc":"by LACCID","lcM":"by LACCID with neighbours","pc":"by Power correlation"}
-    iters = 5
+    iters = 20
     #instance
     estimator = Estimator(iters = iters,algs = algorithms)
     #initialize estimation algorithms
