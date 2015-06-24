@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 import paths
 class Preproc():
-    def __init__(self):
+    def __init__(self,df,users = []):
+        self.users = users
+        self.df = df
         return
-    @staticmethod
-    def proc_cell_df(df,users = []):
+    def proc_cell_df(self):
         """
         :param dfPath: 'path to georeferenced -csv file'
         :param users: list of users with 'bad phones'
@@ -17,55 +18,62 @@ class Preproc():
             2) 'segment'
         """
         #create new column 'laccid' to identify cell-station referencing
-        df['laccid'] =    df['NetworkType'].astype(str) + "-" +\
-                          df['NetworkGen'].astype(str)  + "-" +\
-                          df['LAC'].astype(str)         + "-" +\
-                          df['CID'].astype(str)
+        self.df['laccid'] =    self.df['NetworkType'].astype(str) + "-" +\
+                          self.df['NetworkGen'].astype(str)  + "-" +\
+                          self.df['LAC'].astype(str)         + "-" +\
+                          self.df['CID'].astype(str)
         #create new column 'segment' to identify subway-station referencing
-        df['segment_start_id'] = df['segment_start_id'].str.replace("$","")
-        df['segment_end_id'] = df['segment_end_id'].str.replace("$","")
-        df['segment'] =  df['segment_start_id'] + '-' + df['segment_end_id']
+        self.df['segment_start_id'] = self.df['segment_start_id'].str.replace("$","")
+        self.df['segment_end_id'] = self.df['segment_end_id'].str.replace("$","")
+        self.df['segment'] =  self.df['segment_start_id'] + '-' + self.df['segment_end_id']
         #exclude phones with bad parameters
-        if len(users)!=0:
-            for user in users:
-                df = df[df['User']!= user]
+        if len(self.users)!=0:
+            for user in self.users:
+                self.df = self.df[self.df['User']!= user]
         #exclude cells that have no lac,cid (fields contain "-1") and Power > 0(this means NoSignal)
-        procdf = df[(df['LAC']!=-1)
-                    &(df['CID']!=-1)
-                    &(df['Power']<0)
-                    &(df['Power']>-113)
-                    &(df['NetworkType']!='unknown')
-                    &(df['NetworkGen']!='unknown')
-                    #&(df['MCC']!=-1)
-                    #&(df['MNC']!=-1)
-                    #&(df['PSC']!=-1)
+        self.df = self.df[(self.df['LAC']>0)
+                    &(self.df['CID']>0)
+                    &(self.df['Power']<0)
+                    &(self.df['Power']>-113)
+                    &(self.df['NetworkType']!='unknown')
+                    &(self.df['NetworkGen']!='unknown')
+                    #&(self.df['MCC']!=-1)
+                    #&(self.df['MNC']!=-1)
+                    #&(self.df['PSC']!=-1)
                       ]
 
-        return(procdf)
-    @staticmethod
-    def computeAverTime(df,push = False):
+
+        #lcLens = self.df.groupby(['segment','laccid'])['ratio'].apply(len)
+        #lcKeys = lcLens[lcLens>LCdelta].keys()
+        #self.df = self.df[self.self.df['laccid'].isin(lcKeys)]
+    def filterLackofData(self,LCdelta):
+        self.df = self.df.groupby(['segment','laccid']).filter(lambda x: len(x)>LCdelta)
+    def computeAverTime(self,minTimeSegment,push = False):
         """
         Find a mean path time for each segment.
-        :param df: input georeferenced dataframe
+        :param self.df: input georeferenced dataframe
         :param push: if True push result to CSV
         :return: dataframe with columns : segment | pathTime | stdev
         """
         pathTime = pd.DataFrame()
         # find minimum and maximum times for each segment by each race
-        r_b = df.groupby(['segment','race_id'])['TimeStamp'].max()
-        l_b = df.groupby(['segment','race_id'])['TimeStamp'].min()
+        r_b = self.df.groupby(['segment','race_id'])['TimeStamp'].max()
+        l_b = self.df.groupby(['segment','race_id'])['TimeStamp'].min()
         # compute path times for each race
         delta_ts = (r_b-l_b)/1000
-        # compute the means of path times for each segment.
+        delta_ts = delta_ts[delta_ts>minTimeSegment]
+        # compute the medians of path times for each segment. We compute medians to reduce blunders effect
+        # for ex [30,30,30,60] - "60" doesn't effect on the result. median equal 30,whereas mean could be equal 37.5
         # Note! "level == 0" means that mean function applied to segments,
         # whereas level = 1 - applied to race_id
-        pathTime['pathTime'] = delta_ts.groupby(level = 0).mean()
+        pathTime['pathTime'] = delta_ts.groupby(level = 0).apply(np.median)
         # compute standart deviation
         pathTime['stdev'] = delta_ts.groupby(level = 0).apply(np.std)
 
         pathTime['stdev'] = pathTime['stdev'].apply(lambda x: float("%.2f"%x))
         pathTime['pathTime'] = pathTime['pathTime'].apply(lambda x: float("%.1f"%x))
-
+        trueRaces = delta_ts.groupby(level=1).groups.keys()
+        self.df = self.df[self.df['race_id'].isin(trueRaces)]
         if push == True:
             pathTime.to_csv(paths.subwayInfo)
         return pathTime

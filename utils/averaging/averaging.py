@@ -14,14 +14,29 @@ class Averaging():
         self.base_step = 200
         # seconds
         self.base_step_time = 1
+        # the number of neighbours (for kNeighbours method of averaging)
+        self.nNeighbours = 50
+        # the minimum number of rows for collected LACCID as input parameter (for kNeighbours method of averaging)
+        self.minData = 30
+        # percent of testing data for kNeighbours classifieer
+        self.testsize = 0.4
+        # the minimum passed time needed to move from one station to the another.
+        # This value is set to except blunders effect appeared at the data collection.
+        # By default it is 30 seconds.
+        self.minTime = 30
         self.aver_df = pd.DataFrame()
         self.qualities = {}
         self.dropnames = ['NumRaces','NumUsers','laccid','segment','quality','weight']
         self.unique_names = ['segment','NetworkType','NetworkGen','LAC','CID','laccid','segment_start_id','segment_end_id']
+        # the minimum number of rows for each collected unique cell(for preprocessing)
+        self.Lcdelta = 15
         #instances
         self.ut = Utils()
         self.geojsonConn = GeojsonConn(paths.segments_geojson_path,'CODE')
-        self.power = Smooth(unique_names = self.unique_names)
+        self.power = Smooth(nNeighbours = self.nNeighbours,
+                            unique_names = self.unique_names,
+                            minData = self.minData)
+
         self.interpolator = PointInterpolator(self.geojsonConn)
         self.push = True
         return
@@ -41,15 +56,23 @@ class Averaging():
                 bad_phones['Power'].append(user)
         """
         # 2. Pre-processing of input referenced dataframe,according to the phone parameters
-
-        MoveDf = Preproc.proc_cell_df(MoveDf,users = ['sasfeat'])
-        StopDf = Preproc.proc_cell_df(StopDf,users = ['sasfeat'])
-        self.SubwayInfoDf = Preproc.computeAverTime(MoveDf,push = False)
-        MoveDf.to_csv(paths.preLogPointsPath)
-        StopDf.to_csv(paths.preLogPointsPathStop)
+        self.preprocMove = Preproc(df = MoveDf,
+                                   users = ['sasfeat'])
+        self.preprocStop = Preproc(df = StopDf,
+                                   users = ['sasfeat'])
+        # process stop-data
+        self.preprocStop.proc_cell_df()
+        # process move-data
+        self.preprocMove.proc_cell_df()
+        self.SubwayInfoDf = self.preprocMove.computeAverTime(minTimeSegment = self.minTime,
+                                                             push = True)
+        self.preprocMove.filterLackofData(self.Lcdelta)
+        # save results
+        self.preprocMove.df.to_csv(paths.preLogPointsPath)
+        self.preprocStop.df.to_csv(paths.preLogPointsPathStop)
 
         # 3. Mean pre-processed data
-        self.iterateBySegment(MoveDf)
+        self.iterateBySegment(self.preprocMove.df)
 
         #print (self.qualities)
         #print (self.aver_df)
@@ -60,7 +83,7 @@ class Averaging():
 
         # push smoothed dataframe into the sqlite database
         if self.push ==True :
-            
+
             self.aver_df.drop(self.dropnames,inplace = True, axis = 1)
             for id in ['segment_start_id','segment_end_id']:
                 self.aver_df[id] = self.aver_df[id].apply(int)
@@ -91,7 +114,7 @@ class Averaging():
 
             # full time on the segment / base time step
             pathTime = self.SubwayInfoDf.loc[seg]['pathTime']
-            numOfPts = pathTime/self.base_step_time
+            numOfPts = int(pathTime/self.base_step_time)
 
             seg_laccid_list = self.ut.unique(seg_df,'laccid')
 
@@ -100,21 +123,21 @@ class Averaging():
                 laccid_df = seg_df[seg_df['laccid']==laccid]
                 # get left and right boundaries(min and max) where this signal was detected
                 levels = self.ut.getBoundaries(laccid_df,numOfPts)
-                if levels!={}:
-                    try:
-                        smoothed_laccid_df,quality = self.power.smooth(laccid_df,
-                                                                          func = 'Power',
-                                                                          min_lc_ratio = levels['min_lc_ratio'],
-                                                                          max_lc_ratio = levels['max_lc_ratio'],
-                                                                          levels_num = levels['levels_num'],
-                                                                          test_size = 0.4
-                                                                          )
-                    except:
-                        print  ("Oops! Cell with type-gen-lac-cid == %s at segment %s"%(laccid,seg))
-                        continue
 
-                    self.aver_df = pd.concat([self.aver_df,smoothed_laccid_df],ignore_index = True)
-                    self.qualities[seg][laccid] = quality
+                try:
+                    smoothed_laccid_df,quality = self.power.smooth(laccid_df,
+                                                                      func = 'Power',
+                                                                      min_lc_ratio = levels['min_lc_ratio'],
+                                                                      max_lc_ratio = levels['max_lc_ratio'],
+                                                                      levels_num = levels['levels_num'],
+                                                                      test_size = self.testsize
+                                                                      )
+                except:
+                    print  ("Oops! Cell with type-gen-lac-cid == %s at segment %s"%(laccid,seg))
+                    continue
+
+                self.aver_df = pd.concat([self.aver_df,smoothed_laccid_df],ignore_index = True)
+                self.qualities[seg][laccid] = quality
 
 
 if __name__ == '__main__':

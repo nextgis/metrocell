@@ -8,8 +8,13 @@ from utils import Utils
 import os
 from preproc import Preproc
 class Smooth():
-    def __init__(self,unique_names):
+    def __init__(self,
+                 unique_names,
+                 nNeighbours,
+                 minData):
         self.unique_names = unique_names
+        self.nNeighbours = nNeighbours
+        self.minData = minData
         self.algorithm = 'auto'
         self.weights = ['uniform','distance']
         self.ut = Utils()
@@ -37,36 +42,36 @@ class Smooth():
             test_size = 0.4):
         t = np.array(df['ratio'])
         y = np.array(df[func])
-        size = len(t)
+        #size = len(t)
         t.shape = (-1, 1)
 
-        if size<10:
-            neigh = neighbors.KNeighborsRegressor(n_neighbors = size,algorithm = self.algorithm,weights = 'uniform')
-            model = neigh.fit(t,y)
-            quality = None
-            weight = 'uniform'
-        else:
-            t_train, t_test, y_train, y_test = cross_validation.train_test_split(t, y, test_size=test_size, random_state=1)
-            quality = best_q = -1000000
-            best_params = (None, None)
-            max_iter = min(len(t_train), 50)
-            for n_count in range(1, max_iter):
-                for w in self.weights:
-                    model = neighbors.KNeighborsRegressor(n_neighbors = n_count,algorithm = self.algorithm,weights = w)
-                    #model = AdaBoostRegressor(n_estimators = n_estimators)
-                    model = model.fit(t_train, y_train)
-                    quality = model.score(t_test, y_test)
-                    if quality > best_q:
-                        best_q = quality
-                        best_params = n_count,w
-            if best_params == (None, None):
-                #print t_train, max_iter
-                raise ValueError("No best parameters!")
-            n_count,weight = best_params
-            #print weight
-            model = neighbors.KNeighborsRegressor(n_neighbors=n_count,algorithm = self.algorithm,weights = weight)
-            #model = AdaBoostRegressor(n_estimators=n_estimators)
-            model = model.fit(t_train, y_train)
+       # if size<self.minData:
+           # neigh = neighbors.KNeighborsRegressor(n_neighbors = size,algorithm = self.algorithm,weights = 'uniform')
+           # model = neigh.fit(t,y)
+          #  quality = None
+         #   weight = 'uniform'
+        #else:
+        t_train, t_test, y_train, y_test = cross_validation.train_test_split(t, y, test_size=test_size, random_state=1)
+        quality = best_q = -1000000
+        best_params = (None, None)
+        max_iter = min(len(t_train), self.nNeighbours)
+        for n_count in range(1, max_iter):
+            for w in self.weights:
+                model = neighbors.KNeighborsRegressor(n_neighbors = n_count,algorithm = self.algorithm,weights = w)
+                #model = AdaBoostRegressor(n_estimators = n_estimators)
+                model = model.fit(t_train, y_train)
+                quality = model.score(t_test, y_test)
+                if quality > best_q:
+                    best_q = quality
+                    best_params = n_count,w
+        if best_params == (None, None):
+            #print t_train, max_iter
+            raise ValueError("No best parameters!")
+        n_count,weight = best_params
+        #print weight
+        model = neighbors.KNeighborsRegressor(n_neighbors=n_count,algorithm = self.algorithm,weights = weight)
+        #model = AdaBoostRegressor(n_estimators=n_estimators)
+        model = model.fit(t_train, y_train)
 
         ti = np.linspace(min_lc_ratio, max_lc_ratio, levels_num)[:, np.newaxis]
         y_model = model.predict(ti)

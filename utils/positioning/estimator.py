@@ -26,7 +26,7 @@ class Estimator():
             # initialize a situation
             self.alg = PosAlgorithm()
             for alg in self.algs.keys():
-                self.unpredicted = 0
+                self.alg.unpredicted = 0
                 # estimate statistics using the algorithm
                 statsRow = self.estimateAlgorithm(alg = alg,iter = iter)
                 # write it into the table
@@ -50,7 +50,9 @@ class Estimator():
 
         # Unpredicted segment is the segment that do not have full set of laccids,
         # grabbed by user into this moment. That means, that database is not full.
-        stats['unpr'] = self.unpredicted
+        stats['unpr'] = self.alg.unpredicted
+        stats['numLC'] = self.alg.LCs
+        stats['corrcoeff'] = self.alg.corrCoeffs
         stats.update(predictedSeg)
         stats = {i:[stats[i]] for i in stats.keys()}
         statsRow = pd.DataFrame.from_dict(stats)
@@ -79,7 +81,7 @@ if __name__ =="__main__":
     #parameters
     # ,"r":"random"
     algorithms = {"lc":"by LACCID","lcM":"by LACCID with neighbours","pc":"by Power correlation"}
-    iters = 20
+    iters = 30
     #instance
     estimator = Estimator(iters = iters,algs = algorithms)
     #initialize estimation algorithms
