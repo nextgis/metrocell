@@ -188,8 +188,6 @@ class PosAlgorithm():
         self.unpredicted = 0
         predictedDf = pd.DataFrame()
         resIndex = 0
-        # predicted slices of indexes
-        Slices = []
 
         # 1. Split phone data on base step's sections.
 
@@ -209,6 +207,9 @@ class PosAlgorithm():
         # Extract indexes iteratively
         powersDf = self.predicted_df.groupby(['segment','laccid'])
         for ((seg,lc),SegLcGroup) in powersDf:
+            # predicted slices of indexes
+            Slices = []
+
             predictedIndexes = {'byAbs':[],'byCorr':[]}
             i = 0
             # window wide
@@ -253,8 +254,8 @@ class PosAlgorithm():
             # extract indexes and append them to the main list
             Slices = Slices + self.getSlices(predictedIndexes['byAbs'],method ='byAbs',type = 'maxLimit')
             Slices = Slices + self.getSlices(predictedIndexes['byCorr'],method ='byCorr',type = 'localMaxima')
-        for i in range(0,len(Slices)):
-            predictedDf = pd.concat([predictedDf,self.predicted_df[Slices[i][0]:Slices[i][1]]])
+            for i in range(0,len(Slices)):
+                predictedDf = pd.concat([predictedDf,SegLcGroup[Slices[i][0]:Slices[i][1]]])
         if predictedDf.empty != True:
             # exclude duplicates(rows that are intersected)
             predictedDf = predictedDf.drop_duplicates()
