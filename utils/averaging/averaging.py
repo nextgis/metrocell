@@ -73,9 +73,6 @@ class Averaging():
 
         # 3. Mean pre-processed data
         self.iterateBySegment(self.preprocMove.df)
-
-        #print (self.qualities)
-        #print (self.aver_df)
         # 4. post georeferencing
         self.aver_df['x'] = self.aver_df.apply(lambda x:self.interpolator.interpolate_by_ratio(x['segment'],x['ratio'],0).x,axis = 1)
         self.aver_df['y'] = self.aver_df.apply(lambda x:self.interpolator.interpolate_by_ratio(x['segment'],x['ratio'],0).y,axis = 1)

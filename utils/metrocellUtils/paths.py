@@ -18,6 +18,8 @@ tabname = "cell_log_points"
 subwayInfo = path.join(project_path,"data\\subwayInfo.csv")
 # output to result of estimation
 estimDf = path.join(project_path,"data\\estimDf.csv")
+# output for result frame pf comparison of PowerCorrelation method of positioning
+CorrResultsDf = path.join(project_path,"data\\corrResultsDf.csv")
 # input lines
 segments_geojson_path = path.join(project_path,"segments\\raw\\msk\\metro_lines_dissolved_3857.geojson")
 # output for plots

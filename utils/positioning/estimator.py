@@ -20,20 +20,26 @@ class Estimator():
         :return: prints several numbers for each algorithm
         """
         StatsDf = pd.DataFrame()
+        CorrResultsDf = pd.DataFrame()
         for iter in range(0,self.iters):
             sys.stdout.write("\r" + str(iter+1) + "/" + str(self.iters))
             sys.stdout.flush()
             # initialize a situation
             self.alg = PosAlgorithm()
-            for alg in self.algs.keys():
+            for alg in self.algs:
                 self.alg.unpredicted = 0
                 # estimate statistics using the algorithm
                 statsRow = self.estimateAlgorithm(alg = alg,iter = iter)
                 # write it into the table
                 StatsDf = pd.concat([StatsDf,statsRow])
-        StatsDf_ix = StatsDf.set_index([range(0,self.iters*len(self.algs.keys()))])
-        #print("Mean maxima-errors(meters):")
+                if alg=="pc":
+                    self.alg.resultsDf['iter'] = iter
+                    #self.alg.resultsDf['trueSegment'] = self.alg.truthPoint['segment'].unique().all()
+                    CorrResultsDf = pd.concat([CorrResultsDf,self.alg.resultsDf])
+        StatsDf_ix = StatsDf.set_index([range(0,self.iters*len(self.algs))])
         StatsDf_ix.to_csv(paths.estimDf)
+
+        CorrResultsDf.to_csv(paths.CorrResultsDf)
         print StatsDf_ix
         return
 
@@ -51,8 +57,8 @@ class Estimator():
         # Unpredicted segment is the segment that do not have full set of laccids,
         # grabbed by user into this moment. That means, that database is not full.
         stats['unpr'] = self.alg.unpredicted
-        stats['numLC'] = self.alg.LCs
-        stats['corrcoeff'] = self.alg.corrCoeffs
+        #stats['numLC'] = self.alg.LCs
+        #stats['corrcoeff'] = self.alg.corrCoeffs
         stats.update(predictedSeg)
         stats = {i:[stats[i]] for i in stats.keys()}
         statsRow = pd.DataFrame.from_dict(stats)
@@ -80,7 +86,8 @@ class Estimator():
 if __name__ =="__main__":
     #parameters
     # ,"r":"random"
-    algorithms = {"lc":"by LACCID","lcM":"by LACCID with neighbours","pc":"by Power correlation"}
+    #algorithms = {"lc":"by LACCID","lcM":"by LACCID with neighbours","pc":"by Power correlation"}
+    algorithms = ['lc','lcM','pc']
     iters = 30
     #instance
     estimator = Estimator(iters = iters,algs = algorithms)

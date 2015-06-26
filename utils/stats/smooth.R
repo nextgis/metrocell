@@ -9,8 +9,8 @@ Cell_by_segmnetsSmooth<-function(df,saveFolder)
 ######################################################################################
 library(ggplot2)
 ###paths###
-inputdfPath <- "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\data\\Cells_smoothed_ref2-200.csv"
-saveCellFolderSmooth <- "C:\\temp\\plots\\smoothed2"
+inputdfPath <- "C:\\Users\\Alex\\Documents\\GitHub\\metrocell\\data\\Cells_smoothed_ref-200.csv"
+saveCellFolderSmooth <- "C:\\temp\\plots\\smoothed"
 
 df<-read.table(inputdfPath,header = TRUE, sep = ",",encoding = 'UTF-8')
 df$lc_qual<-paste(as.character(df$laccid),as.character(df$quality),sep=" : ")
