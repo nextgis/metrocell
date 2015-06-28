@@ -16,11 +16,11 @@ class PosAlgorithm():
                  numLC = 4,
                  minCorrcoeff = 0.4,
                  corrDelta = 0.3,
-                 absDelta = 2,
+                 absDelta = 0.3,
                  LCshape = 6,
                  windowStep = 1,
                  numRaces = 3,
-                 minVariance = 0.3):
+                 minVariance = 0.001):
         self.ut = Utils()
         # original database
         self.SmoothedDf = pd.io.parsers.read_csv(paths.saveCellSmoothed)
@@ -62,7 +62,8 @@ class PosAlgorithm():
         self.generateRandomSegment()
         self.grabbedDf = self.getTestSection()
 
-        self.truthPoint = self.randomSampling(self.grabbedDf,numsamples = 1)
+        #self.truthPoint = self.randomSampling(self.grabbedDf,numsamples = 1)
+        self.truthPoint = self.grabbedDf.tail(1)
         self.trueSegment = self.truthPoint['segment'].unique().all()
 
     def generateRandomSegment(self):
@@ -106,7 +107,7 @@ class PosAlgorithm():
         self.LCs = len(LCs)
         """
         return df
-    def predict(self,alg):
+    def predict(self,alg,pcReducingMethod = 'maxCorrMinDelta'):
         """
         initialize the algorithm of postiioning prediction.
         :param alg: keyword for algoruthm
@@ -121,6 +122,8 @@ class PosAlgorithm():
             self.byLacCidMod()
         if alg == "pc":
             self.byPowerCorr(useSmoothed = True)
+
+
     def randomSampling(self,df,numsamples = 50):
         """
         Generate subset from input dataframe.
@@ -129,18 +132,18 @@ class PosAlgorithm():
         :return:
         """
         rows = random.sample(df.index,numsamples)
-        self.predicted_df = df.ix[rows]
-        self.predicted_segments = self.ut.unique(self.predicted_df,'segment')
-        return self.predicted_df
+        self.predictedDf = df.ix[rows]
+        self.predicted_segments = self.ut.unique(self.predictedDf,'segment')
+        return self.predictedDf
     def byLacCid(self):
         """
         Use Lac and Cid identifiers of Base station only.
         :return:
         """
         self.grabbed_lc =  self.ut.unique(self.grabbedDf,'laccid')
-        self.predicted_df = self.SmoothedDf[self.SmoothedDf['laccid'].isin(self.grabbed_lc)]
-        self.predicted_segments = self.ut.unique(self.predicted_df,'segment')
-        if self.predicted_df[self.predicted_df['segment'].isin(self.truthPoint['segment'].unique())].empty == True:
+        self.predictedDf = self.SmoothedDf[self.SmoothedDf['laccid'].isin(self.grabbed_lc)]
+        self.predicted_segments = self.ut.unique(self.predictedDf,'segment')
+        if self.predictedDf[self.predictedDf['segment'].isin(self.truthPoint['segment'].unique())].empty == True:
             self.unpredicted = 1
             print self.truthPoint
     def byLacCidMod(self):
@@ -160,7 +163,7 @@ class PosAlgorithm():
         for step in range(len(self.grabbed_lc),2,-1):
             # check all combinations
             for sublist in itertools.combinations(self.grabbed_lc,step):
-                predicted_subDf = self.predicted_df[self.predicted_df['laccid'].isin(sublist)]
+                predicted_subDf = self.predictedDf[self.predictedDf['laccid'].isin(sublist)]
                 segments = self.ut.unique(predicted_subDf,'segment')
                 # find the right segments for this combination
                 for seg in segments:
@@ -172,7 +175,7 @@ class PosAlgorithm():
                 break
         # if something founded - reduce the selection of predicted segments.
         if predicted_segments!=[]:
-            self.predicted_df = self.predicted_df[self.predicted_df['segment'].isin(predicted_segments)]
+            self.predictedDf = self.predictedDf[self.predictedDf['segment'].isin(predicted_segments)]
         # if no segments - use the segments from base algorithm.
         else:
             self.unpredicted = 1
@@ -184,9 +187,12 @@ class PosAlgorithm():
         it is possible to identify truth position
         :return: predicted data frame.
         """
-        self.resultsDf = pd.DataFrame()
         self.unpredicted = 0
+        self.resultsDf = pd.DataFrame()
         predictedDf = pd.DataFrame()
+        # dataFrame contained control Rows.
+        # Control means that this is row where was founded correlation maximum or minimum of power's delta.
+        controlDf   = pd.DataFrame()
         resIndex = 0
 
         # 1. Split phone data on base step's sections.
@@ -205,11 +211,11 @@ class PosAlgorithm():
 
         absMeans = self.analyzeLC()
         # Extract indexes iteratively
-        powersDf = self.predicted_df.groupby(['segment','laccid'])
+        powersDf = self.predictedDf.groupby(['segment','laccid'])
         for ((seg,lc),SegLcGroup) in powersDf:
             # predicted slices of indexes
             Slices = []
-
+            Controls = []
             predictedIndexes = {'byAbs':[],'byCorr':[]}
             i = 0
             # window wide
@@ -218,9 +224,7 @@ class PosAlgorithm():
                 resIndex+=1
                 # move along indexes at the database and compare section from it
                 # with grabbed section
-                keys = absMeans.keys()
                 grabSection = np.array(SegLcGroup[i:i+ww]['Power'])
-
                 # Check if the signal is in list of constant signals
                 if lc in absMeans.keys():
                     method = 'byAbs'
@@ -252,16 +256,34 @@ class PosAlgorithm():
                 # step forward
                 i+=self.windowStep
             # extract indexes and append them to the main list
-            Slices = Slices + self.getSlices(predictedIndexes['byAbs'],method ='byAbs',type = 'maxLimit')
-            Slices = Slices + self.getSlices(predictedIndexes['byCorr'],method ='byCorr',type = 'localMaxima')
+            byCorrSlices,byCorrControls = self.getSlices(predictedIndexes['byCorr'],method ='byCorr',type = 'localMaxima')
+            byAbsSlices,byAbsControls = self.getSlices(predictedIndexes['byAbs'],method ='byAbs',type = 'maxLimit')
+            Slices = Slices + byCorrSlices + byAbsSlices
+            Controls = Controls + byCorrControls + byAbsControls
             for i in range(0,len(Slices)):
-                predictedDf = pd.concat([predictedDf,SegLcGroup[Slices[i][0]:Slices[i][1]]])
+                self.predictedDf = pd.concat([predictedDf,SegLcGroup[Slices[i]-1:Slices[i]]])
+            for i in range(0,len(Controls)):
+                self.controlDf = pd.concat([controlDf,SegLcGroup[Controls[i]-1:Controls[i]]])
         if predictedDf.empty != True:
-            # exclude duplicates(rows that are intersected)
-            predictedDf = predictedDf.drop_duplicates()
-            self.predicted_df = predictedDf
+            self.predictedDf = predictedDf
+            self.controlDf = controlDf
         else:
             self.unpredicted = 1
+    def reducePredPowerCorrSamples(self,pcReducingMethod):
+        self.unpredicted = 0
+        processedDf = pd.DataFrame()
+        if pcReducingMethod == 'union':
+            # exclude duplicates(rows that are intersected)
+            processedDf = self.predictedDf.drop_duplicates()
+        if pcReducingMethod == 'intersection':
+            # find the segments that have maximum number of registered laccids
+            processedDf = self.findSegmentsIntersection(df = self.predictedDf,group = 'segment',subgroup = 'laccid')
+        if pcReducingMethod == 'maxCorrMinDelta':
+            processedDf = self.findSegmentsIntersection(df = self.controlDf, group = 'segment',subgroup = 'laccid')
+        if processedDf.empty == True:
+            #self.predictedDf = processedDf
+            self.unpredicted = 1
+        return processedDf
     def interpolateByTimeStep(self):
         """
         Linear interpolation of grabbed log by the constant.
@@ -287,44 +309,44 @@ class PosAlgorithm():
         powerVariances = {lc:np.var(self.interpPowers[lc]) for lc in self.interpPowers.keys()}
         splittdLcs = [lc for lc in powerVariances if powerVariances[lc]<self.minVariance]
         absInfo = {lc: np.mean(self.interpPowers[lc]) for lc in splittdLcs}
-        print powerVariances,absInfo
         return absInfo
     def getSlices(self,predictedIndexes,method ='byCorr',type = 'localMaxima'):
         slices = []
+        controlIndexes = []
         values = self.extractUniqueValuesFromSet(predictedIndexes)
         if (values!=[np.nan]) and (values!=[]):
             if method == 'byCorr':
+                maxCoeff = max(values)
+                controlIndexes = [ix[-1] for (ix,val) in predictedIndexes if val == maxCoeff]
             # branch according to the type of coefficients of correlation extraction
                 if type == 'localMaxima':
                     # find local maximums
                     values = [-np.Inf]+values+[-np.Inf]
                     localMaximaIx = argrelextrema(np.array(values),np.greater)[0]
                     localMaximaValues = [values[localMaximaIx[i]] for i in range(0,len(localMaximaIx))]
-                    #print 'localMaxima:'
-                    #print values
-                    #print localMaximaValues
-                    # extract indexes by condition
-                    slices = [i for (i,val) in predictedIndexes if val in localMaximaValues]
+                    # extract the last index from list  by condition
+                    # "last" because it is the last user's position before phone has been pushed the data
+                    slices = [ix[-1] for (ix,val) in predictedIndexes if val in localMaximaValues]
                 if type == 'minLimit':
                     # find minimum acceptable level of coefficients
-                    maxCoeff = max(values)
                     minCoeff = maxCoeff - self.corrDelta
-                    # extract indexes by condition
-                    slices = [i for (i,val) in predictedIndexes if val > minCoeff]
+                    # extract the last index from list by condition
+                    slices = [ix[-1] for (ix,val) in predictedIndexes if val > minCoeff]
             if method == 'byAbs':
+                minDelta = min(values)
+                controlIndexes = [ix[-1] for (ix,delta) in predictedIndexes if delta == minDelta]
                 if type == 'maxLimit':
-                    minDelta = min(values)
                     maxDelta = minDelta + self.absDelta
-                    slices = [i for (i,delta) in predictedIndexes if delta < maxDelta]
-                    # print slices
-            # add slices
-        return slices
+                    slices = [ix[-1] for (ix,delta) in predictedIndexes if delta < maxDelta]
+        return slices,controlIndexes
     def extractUniqueValuesFromSet(self,_set):
         vals = [p for (l,p) in _set]
-        #vals = list(set(vals))
         return vals
-
-
+    def findSegmentsIntersection(self,df,group,subgroup):
+        SubLens = df.groupby(group)[subgroup].unique().apply(len)
+        intersectedSegments = np.array(SubLens[SubLens==max(SubLens)].keys())
+        predictedDf = df[df[group].isin(intersectedSegments)]
+        return predictedDf
 if __name__ == "__main__":
     powerCorr = PosAlgorithm()
     powerCorr.byPowerCorr()
