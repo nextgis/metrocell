@@ -258,12 +258,13 @@ class PosAlgorithm():
             # extract indexes and append them to the main list
             byCorrSlices,byCorrControls = self.getSlices(predictedIndexes['byCorr'],method ='byCorr',type = 'localMaxima')
             byAbsSlices,byAbsControls = self.getSlices(predictedIndexes['byAbs'],method ='byAbs',type = 'maxLimit')
-            Slices = Slices + byCorrSlices + byAbsSlices
-            Controls = Controls + byCorrControls + byAbsControls
+
+            Slices = byCorrSlices + byAbsSlices
+            Controls = byCorrControls + byAbsControls
             for i in range(0,len(Slices)):
-                self.predictedDf = pd.concat([predictedDf,SegLcGroup[Slices[i]-1:Slices[i]]])
+                predictedDf = pd.concat([predictedDf,SegLcGroup[Slices[i]-1:Slices[i]]])
             for i in range(0,len(Controls)):
-                self.controlDf = pd.concat([controlDf,SegLcGroup[Controls[i]-1:Controls[i]]])
+                controlDf = pd.concat([controlDf,SegLcGroup[Controls[i]-1:Controls[i]]])
         if predictedDf.empty != True:
             self.predictedDf = predictedDf
             self.controlDf = controlDf
@@ -284,22 +285,6 @@ class PosAlgorithm():
             #self.predictedDf = processedDf
             self.unpredicted = 1
         return processedDf
-    def interpolateByTimeStep(self):
-        """
-        Linear interpolation of grabbed log by the constant.
-        :return: the dictionary were key is the LAC-CID
-        and value is the array of interpolated powers
-        """
-        self.interpPowers = {}
-        old = self.grabbedDf.groupby(['laccid'])['TimeStamp']\
-            .apply(lambda x: list((x -min(x))/1000))
-
-        new = self.grabbedDf.groupby(['laccid'])['TimeStamp']\
-            .apply(lambda x: range(0,max(x -min(x))/1000+1,self.timeStep))
-        for lc in old.keys():
-            self.interpPowers[lc] = np.interp(new[lc],
-                                         old[lc],
-                                         self.grabbedDf.loc[self.grabbedDf['laccid'] == lc, 'Power'])
 
     def analyzeLC(self):
         """
@@ -347,6 +332,23 @@ class PosAlgorithm():
         intersectedSegments = np.array(SubLens[SubLens==max(SubLens)].keys())
         predictedDf = df[df[group].isin(intersectedSegments)]
         return predictedDf
+    def interpolateByTimeStep(self):
+        """
+        Linear interpolation of grabbed log by the constant.
+        :return: the dictionary were key is the LAC-CID
+        and value is the array of interpolated powers
+        """
+        self.interpPowers = {}
+        old = self.grabbedDf.groupby(['laccid'])['TimeStamp']\
+            .apply(lambda x: list((x -min(x))/1000))
+
+        new = self.grabbedDf.groupby(['laccid'])['TimeStamp']\
+            .apply(lambda x: range(0,max(x -min(x))/1000+1,self.timeStep))
+        for lc in old.keys():
+            self.interpPowers[lc] = np.interp(new[lc],
+                                         old[lc],
+                                         self.grabbedDf.loc[self.grabbedDf['laccid'] == lc, 'Power'])
+
 if __name__ == "__main__":
     powerCorr = PosAlgorithm()
     powerCorr.byPowerCorr()
