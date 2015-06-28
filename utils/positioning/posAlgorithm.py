@@ -107,7 +107,7 @@ class PosAlgorithm():
         self.LCs = len(LCs)
         """
         return df
-    def predict(self,alg,pcReducingMethod = 'maxCorrMinDelta'):
+    def predict(self,alg):
         """
         initialize the algorithm of postiioning prediction.
         :param alg: keyword for algoruthm
@@ -191,8 +191,8 @@ class PosAlgorithm():
         self.resultsDf = pd.DataFrame()
         predictedDf = pd.DataFrame()
         # dataFrame contained control Rows.
-        # Control means that this is row where was founded correlation maximum or minimum of power's delta.
-        controlDf   = pd.DataFrame()
+
+        ReducingTypes = {'byAbs':'maxLimit','byCorr':'localMaxima'}
         resIndex = 0
 
         # 1. Split phone data on base step's sections.
@@ -213,34 +213,36 @@ class PosAlgorithm():
         # Extract indexes iteratively
         powersDf = self.predictedDf.groupby(['segment','laccid'])
         for ((seg,lc),SegLcGroup) in powersDf:
-            # predicted slices of indexes
-            Slices = []
-            Controls = []
             predictedIndexes = {'byAbs':[],'byCorr':[]}
             i = 0
             # window wide
             ww = len(self.interpPowers[lc])
+            if lc in absMeans.keys():
+                method = 'byAbs'
+            else:
+                method = 'byCorr'
             while (i+ww)<=SegLcGroup.shape[0]:
                 resIndex+=1
                 # move along indexes at the database and compare section from it
                 # with grabbed section
                 grabSection = np.array(SegLcGroup[i:i+ww]['Power'])
+                grabIndexes = np.array(SegLcGroup[i:i+ww].index)
                 # Check if the signal is in list of constant signals
-                if lc in absMeans.keys():
-                    method = 'byAbs'
+                # if yes --> compute deltaPower
+                if method =='byAbs':
                     # check the variance
-                    # if variance close to zero --> compare absolute Powers
+                    # if variance close to zero --> compare absolute Powers. Else --> step over
                     lcVariance = np.var(grabSection)
-
                     if lcVariance< self.minVariance:
-                        deltaPower = abs(absMeans[lc] - np.mean(grabSection))
-                        predictedIndexes['byAbs'].append(([i,i+ww],deltaPower))
+                        # delta Power
+                        coeff = abs(absMeans[lc] - np.mean(grabSection))
+                        predictedIndexes['byAbs'].append(([grabIndexes[0],grabIndexes[-1]],coeff))
+                # if no --> compute the correlation
                 else:
-                    method = 'byCorr'
-                    # compute correlation
-                    corrcoef = np.corrcoef(grabSection,self.interpPowers[lc])[0,1]
-                    if corrcoef > self.minCorrcoeff:
-                        predictedIndexes['byCorr'].append(([i,i+ww],corrcoef))
+                    coeff = np.corrcoef(grabSection,self.interpPowers[lc])[0,1]
+                    # around 0 - 0.5 else --> no correlation.Else --> append to the list
+                    if coeff > self.minCorrcoeff:
+                        predictedIndexes['byCorr'].append(([grabIndexes[0],grabIndexes[-1]],coeff))
 
                 # write result into the table
                 resDict = {'index'          :   resIndex,
@@ -256,35 +258,42 @@ class PosAlgorithm():
                 # step forward
                 i+=self.windowStep
             # extract indexes and append them to the main list
-            byCorrSlices,byCorrControls = self.getSlices(predictedIndexes['byCorr'],method ='byCorr',type = 'localMaxima')
-            byAbsSlices,byAbsControls = self.getSlices(predictedIndexes['byAbs'],method ='byAbs',type = 'maxLimit')
-
-            Slices = byCorrSlices + byAbsSlices
-            Controls = byCorrControls + byAbsControls
-            for i in range(0,len(Slices)):
-                predictedDf = pd.concat([predictedDf,SegLcGroup[Slices[i]-1:Slices[i]]])
-            for i in range(0,len(Controls)):
-                controlDf = pd.concat([controlDf,SegLcGroup[Controls[i]-1:Controls[i]]])
+            extractedInfo = self.processPC(predictedIndexes[method],method = method,redType = ReducingTypes[method])
+            extractedIxs = np.array(extractedInfo.index)
+            predictedGroup = SegLcGroup[SegLcGroup.index.isin(extractedIxs)]
+            predictedGroup = pd.concat([predictedGroup,extractedInfo],axis = 1)
+            predictedDf = pd.concat([predictedDf,predictedGroup])
+                #print predictedGroup
         if predictedDf.empty != True:
             self.predictedDf = predictedDf
-            self.controlDf = controlDf
+            #self.controlDf = controlDf
         else:
             self.unpredicted = 1
     def reducePredPowerCorrSamples(self,pcReducingMethod):
         self.unpredicted = 0
+        predictedDf = self.predictedDf
         processedDf = pd.DataFrame()
+
         if pcReducingMethod == 'union':
             # exclude duplicates(rows that are intersected)
-            processedDf = self.predictedDf.drop_duplicates()
+            processedDf = predictedDf.drop_duplicates()
         if pcReducingMethod == 'intersection':
             # find the segments that have maximum number of registered laccids
-            processedDf = self.findSegmentsIntersection(df = self.predictedDf,group = 'segment',subgroup = 'laccid')
+            processedDf = self.findSegmentsIntersection(df = predictedDf,
+                                                        group = 'segment',
+                                                        subgroup = 'laccid')
         if pcReducingMethod == 'maxCorrMinDelta':
-            processedDf = self.findSegmentsIntersection(df = self.controlDf, group = 'segment',subgroup = 'laccid')
+            controlDf = predictedDf[predictedDf['controls'] == 1]
+            processedDf = self.findSegmentsIntersection(df = controlDf,
+                                                        group = 'segment',
+                                                        subgroup = 'laccid')
         if processedDf.empty == True:
-            #self.predictedDf = processedDf
+            processIxs = np.array(processedDf.index)
+            predictedDf.loc[predictedDf.index.isin(processIxs),'postName'] = pcReducingMethod
+            predictedDf.loc[predictedDf.index.isin(processIxs),'post'] = 1
+        if processedDf.empty!= True:
             self.unpredicted = 1
-        return processedDf
+        return processedDf,predictedDf
 
     def analyzeLC(self):
         """
@@ -295,38 +304,39 @@ class PosAlgorithm():
         splittdLcs = [lc for lc in powerVariances if powerVariances[lc]<self.minVariance]
         absInfo = {lc: np.mean(self.interpPowers[lc]) for lc in splittdLcs}
         return absInfo
-    def getSlices(self,predictedIndexes,method ='byCorr',type = 'localMaxima'):
-        slices = []
-        controlIndexes = []
-        values = self.extractUniqueValuesFromSet(predictedIndexes)
+    def processPC(self,predictedIndexes,method ='byCorr',redType = 'localMaxima'):
+        indexes = {}
+        predInfo = pd.DataFrame()
+        values = [p for (l,p) in predictedIndexes]
         if (values!=[np.nan]) and (values!=[]):
             if method == 'byCorr':
-                maxCoeff = max(values)
-                controlIndexes = [ix[-1] for (ix,val) in predictedIndexes if val == maxCoeff]
+                controlPoint = max(values)
             # branch according to the type of coefficients of correlation extraction
-                if type == 'localMaxima':
+                if redType == 'localMaxima':
                     # find local maximums
                     values = [-np.Inf]+values+[-np.Inf]
                     localMaximaIx = argrelextrema(np.array(values),np.greater)[0]
                     localMaximaValues = [values[localMaximaIx[i]] for i in range(0,len(localMaximaIx))]
                     # extract the last index from list  by condition
                     # "last" because it is the last user's position before phone has been pushed the data
-                    slices = [ix[-1] for (ix,val) in predictedIndexes if val in localMaximaValues]
-                if type == 'minLimit':
+                    indexes = {ix[-1]:val for (ix,val) in predictedIndexes if val in localMaximaValues}
+                if redType == 'minLimit':
                     # find minimum acceptable level of coefficients
-                    minCoeff = maxCoeff - self.corrDelta
+                    minCoeff = controlPoint - self.corrDelta
                     # extract the last index from list by condition
-                    slices = [ix[-1] for (ix,val) in predictedIndexes if val > minCoeff]
+                    indexes = {ix[-1]:val for (ix,val) in predictedIndexes if val > minCoeff}
             if method == 'byAbs':
-                minDelta = min(values)
-                controlIndexes = [ix[-1] for (ix,delta) in predictedIndexes if delta == minDelta]
-                if type == 'maxLimit':
-                    maxDelta = minDelta + self.absDelta
-                    slices = [ix[-1] for (ix,delta) in predictedIndexes if delta < maxDelta]
-        return slices,controlIndexes
-    def extractUniqueValuesFromSet(self,_set):
-        vals = [p for (l,p) in _set]
-        return vals
+                controlPoint = min(values)
+                if redType == 'maxLimit':
+                    maxDelta = controlPoint + self.absDelta
+                    indexes = {ix[-1]:delta for (ix,delta) in predictedIndexes if delta < maxDelta}
+            # find control indexes(maximum coefficient of correlation or minimum of deltaPowers)
+            controlIndexes = {ix[-1]:1 for (ix,val) in predictedIndexes if val == controlPoint}
+            d = {'coeffs':indexes,'method':method,'controls':controlIndexes}
+            predInfo = pd.DataFrame.from_dict(d)
+            predInfo['controls'] = predInfo['controls'].fillna(0)
+        return predInfo
+
     def findSegmentsIntersection(self,df,group,subgroup):
         SubLens = df.groupby(group)[subgroup].unique().apply(len)
         intersectedSegments = np.array(SubLens[SubLens==max(SubLens)].keys())

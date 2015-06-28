@@ -23,9 +23,10 @@ class Estimator():
         """
         StatsDf = pd.DataFrame()
         CorrResultsDf = pd.DataFrame()
+        PredictedDf = pd.DataFrame()
 
-        for iter in range(0,self.iters):
-            sys.stdout.write("\r" + str(iter+1) + "/" + str(self.iters))
+        for iter in range(1,self.iters):
+            sys.stdout.write("\r" + str(iter) + "/" + str(self.iters))
             sys.stdout.flush()
             # initialize a situation
             self.alg = PosAlgorithm()
@@ -40,18 +41,20 @@ class Estimator():
                     for method in self.pcMethods:
                         algname = alg + "-" + method
                         # process dataFrame
-                        processedDf = self.alg.reducePredPowerCorrSamples(pcReducingMethod = method)
+                        processedDf,predictedDf = self.alg.reducePredPowerCorrSamples(pcReducingMethod = method)
                         statsRow = self.estimateAlgorithm(processedDf,algname = algname,iter = iter)
                         StatsDf = pd.concat([StatsDf,statsRow])
+                        PredictedDf = pd.concat([PredictedDf, predictedDf])
                     self.alg.resultsDf['iter'] = iter
+                    PredictedDf['iter'] = iter
                     CorrResultsDf = pd.concat([CorrResultsDf,self.alg.resultsDf])
                 # write it into the table
 
-        StatsDf_ix = StatsDf.set_index([range(0,self.iters*(len(self.algs)+len(self.pcMethods)-1))])
-        StatsDf_ix.to_csv(paths.estimDf)
-
+        #StatsDf_ix = StatsDf.set_index([range(1,self.iters*(len(self.algs)+len(self.pcMethods)-1))])
+        StatsDf.to_csv(paths.estimDf)
+        PredictedDf.to_csv(paths.PredictedDf)
         CorrResultsDf.to_csv(paths.CorrResultsDf)
-        print StatsDf_ix
+        print StatsDf
         return
 
     def estimateAlgorithm(self,predictedDf,algname,iter):
@@ -85,7 +88,10 @@ class Estimator():
         truth = zip(truthPoint['x'],truthPoint['y'])
 
         test['xy'] = zip(predictedDf['x'],predictedDf['y'])
-        distances = test.apply(lambda df:vincenty(truth,df['xy']).meters,axis = 1)
+        try:
+            distances = test.apply(lambda df:vincenty(truth,df['xy']).meters,axis = 1)
+        except:
+            print truth
         error = max(distances)
         try:
             error = float("%.1f"%error)
