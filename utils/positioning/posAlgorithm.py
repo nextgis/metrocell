@@ -13,19 +13,16 @@ from utils import Utils
 class PosAlgorithm():
     def __init__(self,range = 15,
                  timeStep = 1,
-                 numLC = 4,
                  minCorrcoeff = 0.4,
                  corrDelta = 0.3,
                  absDelta = 0.3,
-                 LCshape = 6,
                  windowStep = 1,
-                 numRaces = 3,
-                 minVariance = 0.001):
+                 minVariance = 0.3):
         self.ut = Utils()
         # original database
         self.SmoothedDf = pd.io.parsers.read_csv(paths.saveCellSmoothed)
         # source for section imitation
-        self.ImitDb = pd.io.parsers.read_csv(paths.saveCellSmoothed)
+        self.ImitDb = pd.io.parsers.read_csv(paths.preLogPointsPath)
         # output database contained predicted points
         self.predicted_df = None
         # by default the number of unpredicted segments is 0
@@ -43,7 +40,7 @@ class PosAlgorithm():
         self.timeStep = timeStep
         # The number of laccids,grabbed by user. For "byLacCidMod" algorithm it must be more then 2.
         # Otherwise, it will works as "byLacCid" algorithm
-        self.numLC = numLC
+        # self.numLC = numLC
         # minimum of the correlation coefficient (only for byPowerCorr algorithm)
         self.minCorrcoeff = minCorrcoeff
         # delta error of correlation coefficient (only for byPowerCorr algorithm)
@@ -51,11 +48,11 @@ class PosAlgorithm():
         # delta error of range between means of Powers (only for byPowerCorr algorithm)
         self.absDelta = absDelta
         # size of data set for grabbed data frame grouped by laccid
-        self.LCshape = LCshape
+        #self.LCshape = LCshape
         # step over which the coefficient of correlation will be computed (only for byPowerCorr algorithm)
         self.windowStep = windowStep
 
-        self.numRaces = numRaces
+        #self.numRaces = numRaces
         # the minimum variance of Powers in the grabbed dataFrame for each cell(only for byPowerCorr algorithm)
         self.minVariance = minVariance
         # initialize self.segments variable
@@ -121,7 +118,7 @@ class PosAlgorithm():
         if alg == "lcM":
             self.byLacCidMod()
         if alg == "pc":
-            self.byPowerCorr(useSmoothed = True)
+            self.byPowerCorr(useSmoothed = False)
 
 
     def randomSampling(self,df,numsamples = 50):
@@ -160,7 +157,7 @@ class PosAlgorithm():
         #self.byLacCid()
         self.unpredicted = 0
         # iterate by laccids at grabbed list of laccids.
-        for step in range(len(self.grabbed_lc),2,-1):
+        for step in range(len(self.grabbed_lc),1,-1):
             # check all combinations
             for sublist in itertools.combinations(self.grabbed_lc,step):
                 predicted_subDf = self.predictedDf[self.predictedDf['laccid'].isin(sublist)]
@@ -259,12 +256,18 @@ class PosAlgorithm():
                 i+=self.windowStep
             # extract indexes and append them to the main list
             extractedInfo = self.processPC(predictedIndexes[method],method = method,redType = ReducingTypes[method])
-            extractedIxs = np.array(extractedInfo.index)
-            predictedGroup = SegLcGroup[SegLcGroup.index.isin(extractedIxs)]
-            predictedGroup = pd.concat([predictedGroup,extractedInfo],axis = 1)
-            predictedDf = pd.concat([predictedDf,predictedGroup])
+            if extractedInfo.empty!=True:
+                extractedIxs = np.array(extractedInfo.index)
+                predictedGroup = SegLcGroup[SegLcGroup.index.isin(extractedIxs)]
+                predictedGroup = pd.concat([predictedGroup,extractedInfo],axis = 1)
+                predictedDf = pd.concat([predictedDf,predictedGroup])
                 #print predictedGroup
         if predictedDf.empty != True:
+            #print predictedDf.columns.values
+            controlCheck = 'controls' not in predictedDf.columns.values
+            if controlCheck == True:
+                print ""
+
             self.predictedDf = predictedDf
             #self.controlDf = controlDf
         else:
@@ -287,13 +290,14 @@ class PosAlgorithm():
             processedDf = self.findSegmentsIntersection(df = controlDf,
                                                         group = 'segment',
                                                         subgroup = 'laccid')
+        if processedDf.empty != True:
+            #processIxs = np.array(processedDf.index)
+            processedDf.loc[:,pcReducingMethod] = 1
+            #predictedDf[pcReducingMethod] = predictedDf[pcReducingMethod].fillna(0)
+            # predictedDf.loc[predictedDf.index.isin(processIxs),'post'] = 1
         if processedDf.empty == True:
-            processIxs = np.array(processedDf.index)
-            predictedDf.loc[predictedDf.index.isin(processIxs),'postName'] = pcReducingMethod
-            predictedDf.loc[predictedDf.index.isin(processIxs),'post'] = 1
-        if processedDf.empty!= True:
             self.unpredicted = 1
-        return processedDf,predictedDf
+        return processedDf
 
     def analyzeLC(self):
         """
@@ -332,6 +336,8 @@ class PosAlgorithm():
                     indexes = {ix[-1]:delta for (ix,delta) in predictedIndexes if delta < maxDelta}
             # find control indexes(maximum coefficient of correlation or minimum of deltaPowers)
             controlIndexes = {ix[-1]:1 for (ix,val) in predictedIndexes if val == controlPoint}
+            if controlIndexes =={}:
+                print ""
             d = {'coeffs':indexes,'method':method,'controls':controlIndexes}
             predInfo = pd.DataFrame.from_dict(d)
             predInfo['controls'] = predInfo['controls'].fillna(0)
