@@ -1,6 +1,6 @@
-# Table contents
-### Note! Smoothed means that data was processed with smoothed database. No postfix raw data was used.  
-## _estimDf.csv_
+# The content of tables
+##### Note! Smoothed means that data was processed with smoothed database. No postfix raw data was used.  
+### _estimDf.csv_
 
 _alg_ : prediction algorithm [ 'lc','lcM','pc-union','pc-intersection','pc-maxCorrMinDelta' ]
 
@@ -20,11 +20,11 @@ _iter_ : iteration number. One iteration - one imitation of prediction [1,...)
 
 _unpr_ : __1__ - the algorithm has not worked. __0__ - the algorithm has worked [0,1]
 
-## _PredictedD.csv_
+#### _PredictedD.csv_
 
-#### The structure is the same as at the georeferenced DataFrame. But some columns were added:
+###### The structure is the same as at the georeferenced DataFrame. But some columns were added:
 
-_union, intersection, maxCorrMinDelta_  : if row was process by appropriate algorithm. [1]. 
+_union, intersection, maxCorrMinDelta_  : __1__ - if row were processed by appropriate algorithm. [1]. 
 
 _iter_ : iteration number. One iteration - one imitation of prediction [1,...)
 
