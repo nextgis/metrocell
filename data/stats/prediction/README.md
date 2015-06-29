@@ -28,13 +28,13 @@ _union, intersection, maxCorrMinDelta_  : __1__ - if row were processed by appro
 
 _iter_ : iteration number. One iteration - one imitation of prediction [1,...)
 
-_method_ : method of data process. 
+_method_ : method of data process. ['byAbs','byCorr']
 
 __'byAbs'__ - if variance of values of Power is about equal to zero. 
 
 __'byCorr'__ - the coefficient of correlation
 
-_controls_ - the point is "control". The maxima of correlation coefficient or minimum delta Powers 
+_controls_ : the point is "control". The maxima of correlation coefficient or minimum delta Powers 
 among this LAC-CID-NetworkType-NetworkGen [0,1]
 
 _coeffs_ : coefficent of correlation[0,1] or deltaPower [0,....)
