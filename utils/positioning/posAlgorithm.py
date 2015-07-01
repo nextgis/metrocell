@@ -20,9 +20,9 @@ class PosAlgorithm():
                  minVariance = 0.3):
         self.ut = Utils()
         # original database
-        self.SmoothedDf = pd.io.parsers.read_csv(paths.saveCellSmoothed)
+        self.SmoothedDf = pd.io.parsers.read_csv(paths.saveCellSmoothed,index_col = 'index')
         # source for section imitation
-        self.ImitDb = pd.io.parsers.read_csv(paths.preLogPointsPath)
+        self.ImitDb = pd.io.parsers.read_csv(paths.saveCellSmoothed)
         # output database contained predicted points
         self.predicted_df = None
         # by default the number of unpredicted segments is 0
@@ -104,7 +104,7 @@ class PosAlgorithm():
         self.LCs = len(LCs)
         """
         return df
-    def predict(self,alg):
+    def predict(self,alg,useSmoothed):
         """
         initialize the algorithm of postiioning prediction.
         :param alg: keyword for algoruthm
@@ -118,7 +118,7 @@ class PosAlgorithm():
         if alg == "lcM":
             self.byLacCidMod()
         if alg == "pc":
-            self.byPowerCorr(useSmoothed = False)
+            self.byPowerCorr(useSmoothed = useSmoothed)
 
 
     def randomSampling(self,df,numsamples = 50):
@@ -272,33 +272,28 @@ class PosAlgorithm():
             #self.controlDf = controlDf
         else:
             self.unpredicted = 1
-    def reducePredPowerCorrSamples(self,pcReducingMethod):
+    def reducePredPowerCorrSamples(self):
         self.unpredicted = 0
         predictedDf = self.predictedDf
-        processedDf = pd.DataFrame()
-
-        if pcReducingMethod == 'union':
-            # exclude duplicates(rows that are intersected)
-            processedDf = predictedDf.drop_duplicates()
-        if pcReducingMethod == 'intersection':
-            # find the segments that have maximum number of registered laccids
-            processedDf = self.findSegmentsIntersection(df = predictedDf,
-                                                        group = 'segment',
-                                                        subgroup = 'laccid')
-        if pcReducingMethod == 'maxCorrMinDelta':
-            controlDf = predictedDf[predictedDf['controls'] == 1]
-            processedDf = self.findSegmentsIntersection(df = controlDf,
-                                                        group = 'segment',
-                                                        subgroup = 'laccid')
-        if processedDf.empty != True:
-            #processIxs = np.array(processedDf.index)
-            processedDf.loc[:,pcReducingMethod] = 1
-            #predictedDf[pcReducingMethod] = predictedDf[pcReducingMethod].fillna(0)
-            # predictedDf.loc[predictedDf.index.isin(processIxs),'post'] = 1
-        if processedDf.empty == True:
-            self.unpredicted = 1
-        return processedDf
-
+        controlDf = predictedDf[predictedDf['controls'] == 1]
+        byAbs = controlDf[controlDf['method'] =='byAbs']
+        byCorr = controlDf[controlDf['method'] =='byCorr']
+        byAbsIxs = self.filterMod(byAbs,'laccid','coeffs','min')
+        byCorrIxs = self.filterMod(byCorr,'laccid','coeffs','max')
+        maxCorrMinDeltaIx = np.array(byAbsIxs + byCorrIxs)
+        predictedDf.loc[predictedDf.index.isin(maxCorrMinDeltaIx),'maxCorrMinDelta'] = 1
+        predictedDf['maxCorrMinDelta'] = predictedDf['maxCorrMinDelta'].fillna(0)
+        return predictedDf
+    def filterMod(self,df,gr,val,func):
+        Ixs = []
+        if df.empty!=True:
+            byAbsVals = df.groupby([gr])[val].apply(eval(func)).to_dict()
+            for key in df[gr].unique():
+                lcGr = df[df[gr] == key]
+                filteredGr = lcGr[lcGr[val].isin([byAbsVals[key]])]
+                grIxs = list(filteredGr.index)
+                Ixs = Ixs + grIxs
+        return Ixs
     def analyzeLC(self):
         """
         Compute the means if the variance of grabbed log close to zero
@@ -343,11 +338,6 @@ class PosAlgorithm():
             predInfo['controls'] = predInfo['controls'].fillna(0)
         return predInfo
 
-    def findSegmentsIntersection(self,df,group,subgroup):
-        SubLens = df.groupby(group)[subgroup].unique().apply(len)
-        intersectedSegments = np.array(SubLens[SubLens==max(SubLens)].keys())
-        predictedDf = df[df[group].isin(intersectedSegments)]
-        return predictedDf
     def interpolateByTimeStep(self):
         """
         Linear interpolation of grabbed log by the constant.

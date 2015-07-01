@@ -9,12 +9,18 @@ import paths
 from posAlgorithm import PosAlgorithm
 
 class Estimator():
-    def __init__(self,iters,algs,pcMethods):
+    def __init__(self,iters,algs,pcMethods,dbType):
         # iteration limit for each algorithm. After finish find the mean of maximum error.
         self.iters = iters
         self.algs = algs
         # methods of postProcessing (for byPowerCorrelation algorithm only)
         self.pcMethods = pcMethods
+        self.dbType = dbType
+
+        self.statsDfPath = paths.placeStrBeforeType(paths.estimDf,self.dbType.keys()[0])
+        self.predictedDfPath = paths.placeStrBeforeType(paths.PredictedDf,self.dbType.keys()[0])
+        self.corrDfPath = paths.placeStrBeforeType(paths.CorrResultsDf,self.dbType.keys()[0])
+
     def main(self):
         """
         Initialize algorithms of estimation.
@@ -31,42 +37,42 @@ class Estimator():
             # initialize a situation
             self.alg = PosAlgorithm()
             for alg in self.algs:
-                self.alg.predict(alg = alg)
+                # initialize the algorithm
+                self.alg.predict(alg = alg,useSmoothed = self.dbType.values()[0] )
                 predictedDf = self.alg.predictedDf
-
                 # statistic estimation of prediction algorithm
-                if alg != 'pc':
-                    statsRow = self.estimateAlgorithm(predictedDf, algname = alg,iter = iter)
-                    StatsDf = pd.concat([StatsDf,statsRow])
-                else:
-                    for method in self.pcMethods:
-                        # print predictedDf
-                        algname = alg + "-" + method
-                        # postProcessing of dataFrame. reduce the number of founded rows
-                        if self.alg.unpredicted!=1:
-                            processedDf = self.alg.reducePredPowerCorrSamples(pcReducingMethod = method)
-                            predictedDf = pd.concat([predictedDf,processedDf[method]],axis = 1)
-                            predictedDf['iter'] = iter
-                            PredictedDf = pd.concat([PredictedDf, predictedDf])
-                        else:
-                            processedDf = predictedDf
-                        statsRow = self.estimateAlgorithm(processedDf,algname = algname,iter = iter)
-                        StatsDf = pd.concat([StatsDf,statsRow])
+                statsRow = self.estimateAlgorithm(predictedDf, algname = alg,iter = iter)
+                StatsDf = pd.concat([StatsDf,statsRow])
+                if alg == 'pc':
+                    # loop by the postProcessing methods
+                    if self.alg.unpredicted!=1:
+                        predictedDf = self.alg.reducePredPowerCorrSamples()
+                        # postProcessing of dataFrame(reducing the number of founded rows)
+                        for method in self.pcMethods:
+                            algname = alg + "-" + method
+                            processedDf = predictedDf[predictedDf[method] == 1]
+                            statsRow = self.estimateAlgorithm(processedDf,algname = algname,iter = iter)
+                            StatsDf = pd.concat([StatsDf,statsRow])
+                        predictedDf.loc[:,'iter'] = iter
+                        PredictedDf = pd.concat([PredictedDf, predictedDf])
                     self.alg.resultsDf['iter'] = iter
                     CorrResultsDf = pd.concat([CorrResultsDf,self.alg.resultsDf])
-                # write it into the table
 
-        #StatsDf_ix = StatsDf.set_index([range(1,self.iters*(len(self.algs)+len(self.pcMethods)-1))])
-        StatsDf.to_csv(paths.estimDf)
-        PredictedDf.to_csv(paths.PredictedDf)
-        CorrResultsDf.to_csv(paths.CorrResultsDf)
-        print StatsDf
+        # write statistics into the tables
+        StatsDf_ix = StatsDf.set_index([range(0,StatsDf.shape[0])])
+        StatsDf_ix.to_csv(self.statsDfPath)
+        PredictedDf.to_csv(self.predictedDfPath)
+        CorrResultsDf.to_csv(self.corrDfPath)
+        print StatsDf_ix
         return
 
     def estimateAlgorithm(self,predictedDf,algname,iter):
         stats = {"alg":algname,"iter":iter}
         # error - distance delta from the truth point
-        stats['error'] = Estimator.byLatLong(predictedDf,self.alg.truthPoint)
+        try:
+            stats['error'] = Estimator.byLatLong(predictedDf,self.alg.truthPoint)
+        except:
+            print
         predictedSeg = Estimator.byFalseTrueSegment(predictedDf,self.alg.truthPoint)
         # Unpredicted segment is the segment that do not have full set of laccids,
         # grabbed by user into this moment. That means, that database is not full.
@@ -117,9 +123,13 @@ if __name__ =="__main__":
     # ,"r":"random"
     #algorithms = {"lc":"by LACCID","lcM":"by LACCID with neighbours","pc":"by Power correlation"}
     algorithms = ['lc','lcM','pc']
-    pcMethods = ['union','intersection','maxCorrMinDelta']
-    iters = 30
+    pcMethods = ['controls','maxCorrMinDelta']
+    iters = 15
+    dbType = {'smoothed':True}
     #instance
-    estimator = Estimator(iters = iters,algs = algorithms,pcMethods = pcMethods)
+    estimator = Estimator(iters = iters,
+                          algs = algorithms,
+                          pcMethods = pcMethods,
+                          dbType = dbType)
     #initialize estimation algorithms
     estimator.main()

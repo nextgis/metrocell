@@ -1,4 +1,5 @@
 from os import path
+import string
 """
 default paths
 """
@@ -27,3 +28,8 @@ segments_geojson_path = path.join(project_path,"segments\\raw\\msk\\metro_lines_
 # output for plots
 saveCellFolder = path.join(project_path,"data\\plots\\msk\\referenced\\by_cells\\")
 
+
+def placeStrBeforeType(path,val):
+    t = string.split(path,".")
+    s2 = t[0] + "_" + val + "." + t[1]
+    return s2

@@ -19,9 +19,9 @@ class Preproc():
         """
         #create new column 'laccid' to identify cell-station referencing
         self.df['laccid'] =    self.df['NetworkType'].astype(str) + "-" +\
-                          self.df['NetworkGen'].astype(str)  + "-" +\
-                          self.df['LAC'].astype(str)         + "-" +\
-                          self.df['CID'].astype(str)
+                               self.df['NetworkGen'].astype(str)  + "-" +\
+                               self.df['LAC'].astype(str)         + "-" +\
+                               self.df['CID'].astype(str)
         #create new column 'segment' to identify subway-station referencing
         self.df['segment_start_id'] = self.df['segment_start_id'].str.replace("$","")
         self.df['segment_end_id'] = self.df['segment_end_id'].str.replace("$","")
@@ -41,8 +41,8 @@ class Preproc():
                     #&(self.df['MNC']!=-1)
                     #&(self.df['PSC']!=-1)
                       ]
-
-
+        self.df = self.df.rename(columns = {'Unnamed: 0':'index'})
+        self.df = self.df.set_index(['index'])
         #lcLens = self.df.groupby(['segment','laccid'])['ratio'].apply(len)
         #lcKeys = lcLens[lcLens>LCdelta].keys()
         #self.df = self.df[self.self.df['laccid'].isin(lcKeys)]
