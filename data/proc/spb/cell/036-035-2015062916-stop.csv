@@ -1,0 +1,55 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+352,Чёрная речка 2,Stanislav,1435584844791,unknown,unknown,1,250,99,14764,90312142,116,-77
+352,Чёрная речка 2,Stanislav,1435584844791,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584845457,unknown,unknown,1,250,99,14764,90312142,116,-77
+,ServiceLog,Stanislav,1435584845457,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584846466,unknown,unknown,1,250,99,14764,90312142,116,-73
+,ServiceLog,Stanislav,1435584846466,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584847482,unknown,unknown,1,250,99,14764,90312142,116,-73
+,ServiceLog,Stanislav,1435584847482,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584848492,unknown,unknown,1,250,99,14764,90312142,116,-73
+,ServiceLog,Stanislav,1435584848492,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584849509,unknown,unknown,1,250,99,14764,90312142,116,-73
+,ServiceLog,Stanislav,1435584849509,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584850521,unknown,unknown,1,250,99,14764,90312142,116,-79
+,ServiceLog,Stanislav,1435584850521,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584851536,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584851536,unknown,unknown,1,250,99,14764,90312142,116,-79
+,ServiceLog,Stanislav,1435584852554,unknown,unknown,1,250,99,14764,90312142,116,-79
+,ServiceLog,Stanislav,1435584852554,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584853571,unknown,unknown,1,250,99,14764,90312142,116,-79
+,ServiceLog,Stanislav,1435584853571,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584854579,unknown,unknown,1,250,99,14764,90312142,116,-75
+,ServiceLog,Stanislav,1435584854579,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584855598,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584855598,unknown,unknown,1,250,99,14764,90312142,116,-75
+,ServiceLog,Stanislav,1435584856608,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584856608,unknown,unknown,1,250,99,14764,90312142,116,-75
+,ServiceLog,Stanislav,1435584857624,unknown,unknown,1,250,99,14764,90312142,116,-75
+,ServiceLog,Stanislav,1435584857624,unknown,unknown,250-99-14764-90312142,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584858633,unknown,unknown,1,250,99,14764,90358888,116,-75
+,ServiceLog,Stanislav,1435584858633,unknown,unknown,250-99-14764-90358888,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584859649,3G,HSPA,1,250,99,14764,90358888,116,-75
+,ServiceLog,Stanislav,1435584859649,3G,HSPA,250-99-14764-90358888,-1,-1,-1,-1,116,-75
+,ServiceLog,Stanislav,1435584860665,3G,HSPA,1,250,1,100,65569747,501,-75
+,ServiceLog,Stanislav,1435584861685,3G,HSPA,1,250,1,100,65569747,501,-75
+,ServiceLog,Stanislav,1435584862696,3G,HSPA,1,250,1,100,65569747,501,-77
+,ServiceLog,Stanislav,1435584862696,3G,HSPA,250-1-100-65569747,-1,-1,-1,-1,501,-77
+,ServiceLog,Stanislav,1435584863726,3G,HSPA,250-1-100-65569747,-1,-1,-1,-1,501,-77
+,ServiceLog,Stanislav,1435584863726,3G,HSPA,1,250,1,100,65569747,501,-77
+,ServiceLog,Stanislav,1435584864745,3G,HSPA,1,250,1,100,65569747,501,-77
+,ServiceLog,Stanislav,1435584864745,3G,HSPA,250-1-100-65569747,-1,-1,-1,-1,501,-77
+,ServiceLog,Stanislav,1435584865761,3G,HSPA,1,250,1,100,65569747,501,-77
+,ServiceLog,Stanislav,1435584865761,3G,HSPA,250-1-100-65569747,-1,-1,-1,-1,501,-77
+,ServiceLog,Stanislav,1435584866775,3G,HSPA,1,250,1,100,65569747,501,-77
+,ServiceLog,Stanislav,1435584866775,3G,HSPA,250-1-100-65569747,-1,-1,-1,-1,501,-75
+,ServiceLog,Stanislav,1435584867792,3G,HSPA,1,250,1,100,65569747,501,-77
+,ServiceLog,Stanislav,1435584867792,3G,HSPA,250-1-100-65569747,-1,-1,-1,-1,501,-75
+,ServiceLog,Stanislav,1435584868803,3G,HSPA,1,250,1,100,65569747,501,-83
+,ServiceLog,Stanislav,1435584868803,3G,HSPA,250-1-100-65569747,-1,-1,-1,-1,501,-81
+,ServiceLog,Stanislav,1435584869824,3G,HSPA,1,250,1,100,65569747,501,-83
+,ServiceLog,Stanislav,1435584869824,3G,HSPA,250-1-100-65569747,-1,-1,-1,-1,501,-81
+,ServiceLog,Stanislav,1435584870833,3G,HSPA,250-1-100-65569747,-1,-1,-1,-1,501,-81
+,ServiceLog,Stanislav,1435584870833,3G,HSPA,1,250,1,100,65569747,501,-83
+353,Чёрная речка 3,Stanislav,1435584870873,3G,HSPA,250-1-100-65569747,-1,-1,-1,-1,501,-81
+353,Чёрная речка 3,Stanislav,1435584870873,3G,HSPA,1,250,1,100,65569747,501,-83
