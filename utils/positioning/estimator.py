@@ -125,7 +125,7 @@ if __name__ =="__main__":
     algorithms = ['lc','lcM','pc']
     pcMethods = ['controls','maxCorrMinDelta']
     iters = 15
-    dbType = {'smoothed':True}
+    dbType = {'':False}
     #instance
     estimator = Estimator(iters = iters,
                           algs = algorithms,

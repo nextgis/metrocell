@@ -2,13 +2,13 @@
 ##### Note! Smoothed means that data was processed with smoothed database. No postfix raw data was used.  
 ### _estimDf.csv_
 
-_alg_ : prediction algorithm [ 'lc','lcM','pc-union','pc-intersection','pc-maxCorrMinDelta' ]
+_alg_ : prediction algorithm [ 'lc','lcM','pc','pc-controls','pc-maxCorrMinDelta' ]
 
 __'lc'__  - by LAC-CID-NetworkType-NetworkGen
 
 __'lcM'__ - by LAC-CID-NetworkType-NetworkGen and neighbours
 
-__'pc'__ - by Power's Correlation. "union,intersection,maxCorrMinDelta" mean postprocessing method.
+__'pc'__ - by Power's Correlation. "controls" and "maxCorrMinDelta" mean the postprocessing method.
  
 _error_ : maximum distance from current point to the most remote predicted point [0,...)
 

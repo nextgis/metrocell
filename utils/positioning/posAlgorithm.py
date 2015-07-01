@@ -22,7 +22,7 @@ class PosAlgorithm():
         # original database
         self.SmoothedDf = pd.io.parsers.read_csv(paths.saveCellSmoothed,index_col = 'index')
         # source for section imitation
-        self.ImitDb = pd.io.parsers.read_csv(paths.saveCellSmoothed)
+        self.ImitDb = pd.io.parsers.read_csv(paths.preLogPointsPath)
         # output database contained predicted points
         self.predicted_df = None
         # by default the number of unpredicted segments is 0
