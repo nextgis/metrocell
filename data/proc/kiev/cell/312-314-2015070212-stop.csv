@@ -1,0 +1,28 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+3142,Золотые ворота 2,maxmal,1435830534414,unknown,unknown,1,-1,-1,0,0,-1,-111
+,ServiceLog,maxmal,1435830535367,unknown,unknown,1,-1,-1,0,0,-1,-111
+,ServiceLog,maxmal,1435830536419,unknown,unknown,1,-1,-1,0,0,-1,-111
+,ServiceLog,maxmal,1435830537479,unknown,unknown,1,-1,-1,0,0,-1,-111
+,ServiceLog,maxmal,1435830538514,unknown,unknown,1,-1,-1,0,0,-1,-111
+,ServiceLog,maxmal,1435830539526,unknown,unknown,1,255,1,1501,33141,-1,-87
+,ServiceLog,maxmal,1435830540542,unknown,unknown,1,255,1,1501,33141,-1,-87
+,ServiceLog,maxmal,1435830541579,unknown,unknown,1,255,1,1501,33141,-1,-81
+,ServiceLog,maxmal,1435830542614,unknown,unknown,1,255,1,1501,33141,-1,-75
+,ServiceLog,maxmal,1435830543644,unknown,unknown,1,255,1,1501,33141,-1,-69
+,ServiceLog,maxmal,1435830544702,unknown,unknown,1,255,1,1501,33141,-1,-69
+,ServiceLog,maxmal,1435830545734,unknown,unknown,1,255,1,1501,33141,-1,-65
+,ServiceLog,maxmal,1435830546780,unknown,unknown,1,255,1,1501,33141,-1,-65
+,ServiceLog,maxmal,1435830547815,unknown,unknown,1,255,1,1501,33141,-1,-65
+,ServiceLog,maxmal,1435830548847,unknown,unknown,1,255,1,1501,33141,-1,-65
+,ServiceLog,maxmal,1435830549887,unknown,unknown,1,255,6,10914,33141,-1,-65
+,ServiceLog,maxmal,1435830550937,unknown,unknown,1,255,6,10914,33141,-1,-65
+,ServiceLog,maxmal,1435830551975,2G,EDGE,1,255,6,10995,3141,-1,-65
+,ServiceLog,maxmal,1435830552996,2G,EDGE,1,255,6,10995,3141,-1,-65
+,ServiceLog,maxmal,1435830554028,2G,EDGE,1,255,6,10995,3141,-1,-65
+,ServiceLog,maxmal,1435830555064,2G,EDGE,1,255,6,10995,3141,-1,-65
+,ServiceLog,maxmal,1435830556096,2G,EDGE,1,255,6,10995,3141,-1,-65
+,ServiceLog,maxmal,1435830557136,2G,EDGE,1,255,6,10995,3141,-1,-65
+,ServiceLog,maxmal,1435830558170,2G,EDGE,1,255,6,10995,3141,-1,-65
+,ServiceLog,maxmal,1435830559203,2G,EDGE,1,255,6,10995,3141,-1,-65
+,ServiceLog,maxmal,1435830560237,2G,EDGE,1,255,6,10995,3141,-1,-65
+3143,Золотые ворота 3,maxmal,1435830561218,2G,EDGE,1,255,6,10995,3141,-1,-65
