@@ -1,33 +1,44 @@
+# -*- encoding: utf-8 -*-
+# prepare timings
+# run from util folder
+# Data will be put in the same folder with script
+# example: python extract_timings.py city
+# 
+
 import os
 import csv
 import datetime
 import glob
+import sys
 
 #ugly, I know)
-cell_data_loc = '/media/sim/Windows7_OS/work/metrocell/data/proc/msk/cell'
-graph_loc = '/home/sim/work/metro4all/repo/data/msk/graph.csv'
+
+city = sys.argv[1]
+
+cell_data_loc = '/media/sim/Windows7_OS/work/metrocell/data/proc/' + city + '/cell'
+graph_loc = '/home/sim/work/metro4all/repo/data/' + city + '/graph.csv'
 
 #resulting csv with timings on all edges
 f_time_fields = ('ID_FROM','ID_TO','TIME')
 
-f_time_edge = open('graph_time_edge.csv','wb')
+f_time_edge = open('graph_time_edge_' + city + '.csv','wb')
 f_time_edge.write(','.join(f_time_fields))
 f_time_edge.write('\n')
 graph_data_time_edge_csv = csv.DictWriter(f_time_edge, fieldnames=f_time_fields)
 
 #resulting csv with timings on stops
-f_time_stop = open('graph_time_stop.csv','wb')
+f_time_stop = open('graph_time_stop_' + city + '.csv','wb')
 f_time_stop.write(','.join(f_time_fields))
 f_time_stop.write('\n')
 graph_data_time_stop_csv = csv.DictWriter(f_time_stop, fieldnames=f_time_fields)
 
 #resulting csv with timings on edges only from the current graph (twice less edges)
-f_time_fields = ('ID_FROM','ID_TO','TIME','TIME_DIF')
+f_time_fields = ('ID_FROM','ID_TO','NAME_FROM','NAME_TO','COST') #,'TIME_DIF')
 
-f_time_edge_graph = open('graph_time_edge_graph.csv','wb')
-f_time_edge_graph.write(','.join(f_time_fields))
+f_time_edge_graph = open('graph_time_edge_graph_' + city + '.csv','wb')
+f_time_edge_graph.write(';'.join(f_time_fields))
 f_time_edge_graph.write('\n')
-graph_data_time_edge_graph_csv = csv.DictWriter(f_time_edge_graph, fieldnames=f_time_fields)
+graph_data_time_edge_graph_csv = csv.DictWriter(f_time_edge_graph, fieldnames=f_time_fields, delimiter=";")
 
 
 graph_data = []
@@ -59,11 +70,11 @@ for graph_entry in graph_data:
                 for row in seg_reader:
                     seg_data.append(row)
 
+                print(seg_id + ' tunnel')
                 start_time = datetime.datetime.fromtimestamp(float(seg_data[1]['TimeStamp'])/1000)
                 end_time = datetime.datetime.fromtimestamp(float(seg_data[-1]['TimeStamp'])/1000)
                 time_diff_sec = (end_time - start_time).total_seconds()
                 time_diff_secs_edge.append(time_diff_sec)
-                print(seg_id + ' tunnel')
             else:
                 seg_csv = open(seg_csv_name, 'rb')
                 seg_reader = csv.DictReader(seg_csv,delimiter=',')
@@ -71,11 +82,11 @@ for graph_entry in graph_data:
                 for row in seg_reader:
                     seg_data.append(row)
 
+                print(seg_id + ' stop')
                 start_time = datetime.datetime.fromtimestamp(float(seg_data[1]['TimeStamp'])/1000)
                 end_time = datetime.datetime.fromtimestamp(float(seg_data[-1]['TimeStamp'])/1000)
                 time_diff_sec = (end_time - start_time).total_seconds()
                 time_diff_secs_stop.append(time_diff_sec)            
-                print(seg_id + ' stop')
 
         #write every edge
         if len(time_diff_secs_edge) != 0:
@@ -95,14 +106,23 @@ for graph_entry in graph_data:
         time_diff_mean = time_diff_secs_edge_pair[0]
         graph_data_time_edge_graph_csv.writerow(dict(ID_FROM=graph_entry['id_from'],
                                               ID_TO=graph_entry['id_to'],
-                                              TIME=round(time_diff_mean,3)))
+                                              NAME_FROM=graph_entry['name_from'],
+                                              NAME_TO=graph_entry['name_to'],
+                                              COST=int(round(time_diff_mean,0))))
     elif len(time_diff_secs_edge_pair) == 2:
         time_diff_mean = (time_diff_secs_edge_pair[0] + time_diff_secs_edge_pair[1])/2
         time_diff = abs(time_diff_secs_edge_pair[0] - time_diff_secs_edge_pair[1])
         graph_data_time_edge_graph_csv.writerow(dict(ID_FROM=graph_entry['id_from'],
                                               ID_TO=graph_entry['id_to'],
-                                              TIME=round(time_diff_mean,3),
-                                              TIME_DIF=round(time_diff,3)))
+                                              NAME_FROM=graph_entry['name_from'],
+                                              NAME_TO=graph_entry['name_to'],
+                                              COST=int(round(time_diff_mean,0)))) #TIME_DIF=round(time_diff,3)))
+    else:
+        graph_data_time_edge_graph_csv.writerow(dict(ID_FROM=graph_entry['id_from'],
+                                              ID_TO=graph_entry['id_to'],
+                                              NAME_FROM=graph_entry['name_from'],
+                                              NAME_TO=graph_entry['name_to'],
+                                              COST=graph_entry['cost'])) #TIME_DIF=round(time_diff,3)))
 
 f_time_edge.close()
 f_time_stop.close()

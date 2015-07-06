@@ -1,0 +1,21 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+1162,Политехнический институт 2,maxmal,1435837455517,unknown,unknown,1,-1,-1,0,0,-1,-107
+,ServiceLog,maxmal,1435837455564,unknown,unknown,1,-1,-1,0,0,-1,-107
+,ServiceLog,maxmal,1435837456590,unknown,unknown,1,-1,-1,0,0,-1,-107
+,ServiceLog,maxmal,1435837457636,unknown,unknown,1,-1,-1,0,0,-1,-107
+,ServiceLog,maxmal,1435837458677,unknown,unknown,1,-1,-1,0,0,-1,-107
+,ServiceLog,maxmal,1435837459710,unknown,unknown,1,255,6,10995,1166,-1,-105
+,ServiceLog,maxmal,1435837460742,unknown,unknown,1,255,6,10995,1166,-1,-101
+,ServiceLog,maxmal,1435837461781,unknown,unknown,1,255,6,10995,1166,-1,-97
+,ServiceLog,maxmal,1435837462815,2G,EDGE,1,255,6,10995,1166,-1,-83
+,ServiceLog,maxmal,1435837463844,2G,EDGE,1,255,6,10995,1166,-1,-83
+,ServiceLog,maxmal,1435837464883,2G,EDGE,1,255,6,10995,1166,-1,-75
+,ServiceLog,maxmal,1435837465914,2G,EDGE,1,255,6,10995,1166,-1,-75
+,ServiceLog,maxmal,1435837466947,2G,EDGE,1,255,6,10995,1166,-1,-75
+,ServiceLog,maxmal,1435837467981,2G,EDGE,1,255,6,10995,1166,-1,-75
+,ServiceLog,maxmal,1435837469018,2G,EDGE,1,255,6,10995,1166,-1,-75
+,ServiceLog,maxmal,1435837470050,2G,EDGE,1,255,6,10995,1166,-1,-75
+,ServiceLog,maxmal,1435837471088,2G,EDGE,1,255,6,10995,1166,-1,-75
+,ServiceLog,maxmal,1435837472123,2G,EDGE,1,255,6,10995,1166,-1,-75
+,ServiceLog,maxmal,1435837473156,2G,EDGE,1,255,6,10995,1166,-1,-75
+1163,Политехнический институт 3,maxmal,1435837473688,2G,EDGE,1,255,6,10995,1166,-1,-75

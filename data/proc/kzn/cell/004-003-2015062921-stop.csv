@@ -1,0 +1,37 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+32,Яшьлек 2,KD,1435602068109,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+32,Яшьлек 2,KD,1435602068109,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602068125,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602068125,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602069137,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602069137,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602070150,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602070150,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602071170,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602071170,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602072189,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602072189,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602073207,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602073207,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602074224,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602074224,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602075236,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602075236,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602076248,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602076248,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602077261,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602077261,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602078283,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602078283,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602079308,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602079308,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602080329,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602080329,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602081347,2G,GPRS,-1--1-55168-7537,-1,-1,55168,7537,-1,-93
+,ServiceLog,KD,1435602081347,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602082365,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602083384,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602084412,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602085432,unknown,unknown,1,-1,-1,-1,-1,-1,0
+,ServiceLog,KD,1435602086450,unknown,unknown,1,-1,-1,-1,-1,-1,0
+33,Яшьлек 3,KD,1435602086892,unknown,unknown,1,-1,-1,-1,-1,-1,0
