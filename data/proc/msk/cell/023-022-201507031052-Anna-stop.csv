@@ -1,0 +1,51 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+222,Орехово 2,Anna,1435910084330,unknown,unknown,1,250,99,26803,49615,-1,-77
+222,Орехово 2,Anna,1435910084330,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910084491,unknown,unknown,1,250,99,26803,49615,-1,-81
+,ServiceLog,Anna,1435910084491,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910085576,unknown,unknown,1,250,99,26803,49615,-1,-81
+,ServiceLog,Anna,1435910085576,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910086588,unknown,unknown,1,250,99,26803,49615,-1,-77
+,ServiceLog,Anna,1435910086588,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910087667,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910087667,unknown,unknown,1,250,99,26803,49615,-1,-77
+,ServiceLog,Anna,1435910088677,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910088677,unknown,unknown,1,250,99,26803,49615,-1,-77
+,ServiceLog,Anna,1435910089938,unknown,unknown,1,250,99,26803,49615,-1,-77
+,ServiceLog,Anna,1435910089938,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910090956,unknown,unknown,1,250,99,26803,49615,-1,-83
+,ServiceLog,Anna,1435910090956,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910092027,unknown,unknown,1,250,99,26803,49615,-1,-83
+,ServiceLog,Anna,1435910092027,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910093045,unknown,unknown,1,250,99,26803,49615,-1,-87
+,ServiceLog,Anna,1435910093045,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910094075,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910094075,unknown,unknown,1,250,99,26803,49615,-1,-87
+,ServiceLog,Anna,1435910095087,unknown,unknown,1,250,99,26803,49615,-1,-75
+,ServiceLog,Anna,1435910095087,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910096169,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910096169,unknown,unknown,1,250,99,26803,49615,-1,-75
+,ServiceLog,Anna,1435910097179,unknown,unknown,1,250,99,26803,49615,-1,-81
+,ServiceLog,Anna,1435910097179,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910098257,unknown,unknown,1,250,99,26803,49615,-1,-81
+,ServiceLog,Anna,1435910098257,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910099268,unknown,unknown,1,250,99,26803,49615,-1,-81
+,ServiceLog,Anna,1435910099268,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910100336,unknown,unknown,1,250,99,26803,49615,-1,-81
+,ServiceLog,Anna,1435910100336,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910101346,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910101346,unknown,unknown,1,250,99,26803,49615,-1,-81
+,ServiceLog,Anna,1435910102397,unknown,unknown,1,250,99,26803,49615,-1,-81
+,ServiceLog,Anna,1435910102397,unknown,unknown,250-99-26803-49615,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910103435,2G,EDGE,1,250,2,7765,1500,-1,-75
+,ServiceLog,Anna,1435910103435,2G,EDGE,250-2-7765-1500,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910104467,2G,EDGE,1,250,2,7765,1500,-1,-75
+,ServiceLog,Anna,1435910104467,2G,EDGE,250-2-7765-1500,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910105478,2G,EDGE,1,250,2,7765,1500,-1,-73
+,ServiceLog,Anna,1435910105478,2G,EDGE,250-2-7765-1500,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910106561,2G,EDGE,250-2-7765-1500,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910106561,2G,EDGE,1,250,2,7765,1500,-1,-73
+,ServiceLog,Anna,1435910107571,2G,EDGE,250-2-7765-1500,-1,-1,-1,-1,-1,-105
+,ServiceLog,Anna,1435910107571,2G,EDGE,1,250,2,7765,1500,-1,-79
+223,Орехово 3,Anna,1435910108563,2G,EDGE,250-2-7765-1500,-1,-1,-1,-1,-1,-105
+223,Орехово 3,Anna,1435910108563,2G,EDGE,1,250,2,7765,1500,-1,-79

@@ -1,0 +1,26 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+1432,Тульская 2,vlad,1435905110998,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905111419,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905112449,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905113486,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905114496,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905115507,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905116520,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905117558,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905118573,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905119583,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905120594,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905121620,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905122646,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905123680,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905124718,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905125759,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905126769,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905127780,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905128793,unknown,unknown,1,-1,-1,-1,-1,-1,-1
+,ServiceLog,vlad,1435905129805,2G,EDGE,1,250,2,7755,1090,-1,-69
+,ServiceLog,vlad,1435905130822,2G,EDGE,1,250,2,7755,1090,-1,-69
+,ServiceLog,vlad,1435905131836,2G,EDGE,1,250,2,7755,1090,-1,-69
+,ServiceLog,vlad,1435905132849,2G,EDGE,1,250,2,7755,1090,-1,-69
+,ServiceLog,vlad,1435905133861,2G,EDGE,1,250,2,7755,1090,-1,-69
+1433,Тульская 3,vlad,1435905134134,2G,EDGE,1,250,2,7755,1090,-1,-69
