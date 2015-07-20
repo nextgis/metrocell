@@ -1,0 +1,22 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power
+192,Imielin 2,alexkar,1436213541230,unknown,unknown,1,-1,-1,-1,-1,91,-107
+,ServiceLog,alexkar,1436213541436,unknown,unknown,1,-1,-1,-1,-1,91,-107
+,ServiceLog,alexkar,1436213542460,unknown,unknown,1,-1,-1,-1,-1,91,-107
+,ServiceLog,alexkar,1436213543506,unknown,unknown,1,-1,-1,-1,-1,91,-107
+,ServiceLog,alexkar,1436213544560,unknown,unknown,1,-1,-1,-1,-1,91,-107
+,ServiceLog,alexkar,1436213545608,unknown,unknown,1,-1,-1,-1,-1,91,-107
+,ServiceLog,alexkar,1436213546654,unknown,unknown,1,-1,-1,-1,-1,91,-107
+,ServiceLog,alexkar,1436213547688,unknown,unknown,1,-1,-1,-1,-1,91,-107
+,ServiceLog,alexkar,1436213548729,unknown,unknown,1,260,1,11047,6821,0,-67
+,ServiceLog,alexkar,1436213549777,unknown,unknown,1,260,1,11047,6821,0,-67
+,ServiceLog,alexkar,1436213550822,unknown,unknown,1,260,1,11047,6821,0,-67
+,ServiceLog,alexkar,1436213551878,unknown,unknown,1,260,1,11047,6821,0,-61
+,ServiceLog,alexkar,1436213552927,unknown,unknown,1,260,1,11047,6821,0,-61
+,ServiceLog,alexkar,1436213553985,unknown,unknown,1,260,1,11047,6821,0,-61
+,ServiceLog,alexkar,1436213555032,unknown,unknown,1,260,1,11047,6821,0,-67
+,ServiceLog,alexkar,1436213556082,unknown,unknown,1,260,1,11047,6821,0,-67
+,ServiceLog,alexkar,1436213557134,unknown,unknown,1,260,1,11047,6821,0,-67
+,ServiceLog,alexkar,1436213558190,unknown,unknown,1,260,1,11047,6821,0,-63
+,ServiceLog,alexkar,1436213559208,unknown,unknown,1,260,1,11047,6821,0,-63
+,ServiceLog,alexkar,1436213560240,unknown,unknown,1,260,1,11047,6821,0,-63
+193,Imielin 3,alexkar,1436213561102,unknown,unknown,1,260,1,11047,6821,0,-63
