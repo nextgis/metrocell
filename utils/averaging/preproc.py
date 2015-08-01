@@ -1,4 +1,5 @@
-import os
+__author__ = 'Alex'
+
 import pandas as pd
 import numpy as np
 import paths
@@ -80,8 +81,8 @@ class Preproc():
         """
         pathTime = pd.DataFrame()
         # find minimum and maximum times for each segment by each race
-        r_b = self.df.groupby(['segment','race_id'])['TimeStamp'].max()
-        l_b = self.df.groupby(['segment','race_id'])['TimeStamp'].min()
+        r_b = self.df.groupby(['segment','race_id','User'])['TimeStamp'].max()
+        l_b = self.df.groupby(['segment','race_id','User'])['TimeStamp'].min()
         # compute path times for each race
         delta_ts = (r_b-l_b)/1000
         delta_ts = delta_ts[delta_ts>minTimeSegment]

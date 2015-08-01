@@ -2,15 +2,16 @@
 # coding=utf-8
 __author__ = 'yellow'
 
-from os import listdir, path
+from os import listdir, path,mkdir
 from argparse import ArgumentParser
 import sys
 
 from ngl_log_handler import NglLogHandler
 from simple_time_strategy import SimpleTimeStrategy
 from geoArgumentsExtractor import GeoArgumentsExtractor
-from geojsonC import GeojsonConn
+from geoFilesConn import GeoFilesConn
 from pointInterpolator import PointInterpolator
+from utils import Utils
 def main():
     # Processing Modes
     SINGLE = 'single'
@@ -23,19 +24,25 @@ def main():
     parser.add_argument('-g', '--geojson', action='store_true', help='Write out GeoJSON files with all rows from input CSV files')
     parser.add_argument('-e', '--exclude-stops', action='store_true', help='Exclude "-stop" files')
     parser.add_argument('-b', '--bind-to-csv', action = 'store_true',help = 'Write out to one csv- dataFrame')
-
+    parser.add_argument('-s', '--stations', type = str,help = 'Stations CSV file')
+    #parser.add_argument('-sC','--stationsClosed',type = str,help = 'Stations CSV file which were closed')
     parser.add_argument('input_log', type=str, help='DIR or single Log file in CVS format for one segment')
     parser.add_argument('output_csv', type=str, help='DIR or single Result file with coordinates in CSV format')
 
     args = parser.parse_args()
 
-    geojsonConn = GeojsonConn(args.lines, 'CODE')
-    extractor = GeoArgumentsExtractor(geojsonConn)
-    interpolator = PointInterpolator(geojsonConn)
+    geoFilesConn = GeoFilesConn(args.lines, 'CODE',args.stations)
+    extractor = GeoArgumentsExtractor(geoFilesConn)
+    interpolator = PointInterpolator(geoFilesConn)
+
+    if not args.exclude_stops:
+        # create stop-dir
+        stop_path = args.output_csv + '\\stop\\'
+        Utils.initOutFld(['stop'],args.output_csv)
     #dbase = Dbase(args.output_csv)
     all_rows = []
     stop_rows =  []
-
+    step = 0
     # get input files for processing
     input_files = []
     if args.mode == SINGLE:
@@ -43,14 +50,19 @@ def main():
     else:
         for fname in listdir(args.input_log):
             if fname.endswith(".csv"):
-                if args.exclude_stops and '-stop' in fname:
+                if args.exclude_stops and ('-stop' in fname or '-inter' in fname):
                     continue
                 input_files.append(path.join(args.input_log, fname))
 
     # iterate input files
+    length = len(input_files)
+
     for fname in input_files:
+        step+=1
+        sys.stdout.write("\r" + str(step) + "/" + str(length))
+        sys.stdout.flush()
         stopkey = 0
-        if '-stop' in fname:
+        if '-stop'  in fname or '-inter' in fname:
             stopkey = 1
         # get log rows
         log_entries = NglLogHandler.get_log_entries(fname)
@@ -61,7 +73,7 @@ def main():
        
         try:
             # georeferencing log rows
-            interpol_entries = SimpleTimeStrategy.georeferencing(metro_line_name, log_entries, extractor, geojsonConn, interpolator, stopkey)
+            interpol_entries = SimpleTimeStrategy.georeferencing(metro_line_name, log_entries, extractor, geoFilesConn, interpolator, stopkey)
 
         except:
             print '>Oops!', metro_line_name, sys.exc_value
@@ -73,7 +85,6 @@ def main():
 
         else:
             if stopkey == 1:
-                stop_path = args.output_csv + '\\stop\\'
                 output_path = path.join(stop_path, path.basename(fname))
             else:
                 output_path = path.join(args.output_csv, path.basename(fname))
@@ -104,5 +115,7 @@ def main():
         NglLogHandler.save_as_csv(output_move_path, all_rows)
         if not args.exclude_stops:
             NglLogHandler.save_as_csv(output_stop_path, stop_rows)
+
+
 if __name__ == '__main__':
     main()

@@ -1,5 +1,7 @@
 import os
 from datetime import datetime
+import numpy as np
+import pandas as pd
 class Utils():
     def __init__(self):
         return
@@ -8,25 +10,12 @@ class Utils():
         if type == "one":
             l = l[0]
         return l
-    def getBoundaries(self,df,numOfPts):
-        """
 
-        :param df:
-        :param numOfPts:
-        :return:
-        """
-        dict = {}
-        lc_ratios = list(df['ratio'])
-        min_lc_ratio,max_lc_ratio = min(lc_ratios),max(lc_ratios)
-        delta_ratios = max_lc_ratio - min_lc_ratio
-        levels_num = int(delta_ratios*numOfPts)
-
-        return min_lc_ratio,max_lc_ratio,levels_num
     @staticmethod
-    def fromCurrentTime(ext):
+    def fromCurrentTime(mark,ext):
         t = datetime.now()
         timename = str(t.year) + "-" + str(t.month) + "-" + str(t.day) + "-" + str(t.hour) + "-" + str(t.minute) + "-" + str(t.second)
-        timename = timename + ext
+        timename = timename + "-" + mark + ext
         return timename
     @staticmethod
     def initOutFld(flds,outDir):
@@ -40,3 +29,12 @@ class Utils():
         e = lambda fld: os.path.isdir(outDir + "\\" + fld)
         # create folders if need
         [f(d) for d in flds if e(d) == False]
+    @staticmethod
+    def computeInterpStep(df):
+        steps = []
+        grouped = df.groupby(['race_id','User','laccid'])
+        for ix,group in grouped:
+            step = np.mean(pd.rolling_apply(group['ratio'],2,np.diff))
+            steps.append(step)
+        interpStep = np.mean(steps)
+        return interpStep

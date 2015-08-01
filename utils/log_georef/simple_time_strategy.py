@@ -1,7 +1,6 @@
 # coding=utf-8
 import copy
-import random
-
+from utils import  Utils
 __author__ = 'yellow'
 
 class SimpleTimeStrategy():
@@ -20,7 +19,7 @@ class SimpleTimeStrategy():
         """
         # get start time, finish time and total time for segment
         new_entries = []
-        race_id = random.randint(1,999999999)
+        #race_id =  Utils.generateRandomId()
         if stopkey ==0:
             key_pts = extractor.extract_key_pts(line_log_entries)
             #get parameters of acceleration,constant speed and decceleration.
@@ -42,7 +41,7 @@ class SimpleTimeStrategy():
                 dist_ratio = 0
             log_entry_point = pointInterpolator.interpolate_by_ratio(line_id, dist_ratio,stopkey)
 
-            new_entry['race_id'] = race_id
+            #new_entry['race_id'] = race_id
             new_entry['x'] = log_entry_point.x
             new_entry['y'] = log_entry_point.y
             new_entry['segment_start_id'] = "$"+str(line_id.split('-')[0])

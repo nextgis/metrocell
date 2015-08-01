@@ -8,32 +8,67 @@ import pandas as pd
 import numpy as np
 
 class Filters:
-    def __init__(self,unique_names,
-                 nNeighbours,
-                 minData,
-                 test_size):
-        self.unique_names =  unique_names
-        self.nNeighbours =   nNeighbours
-        self.minData =       minData
-        self.test_size =     test_size
-
-        self.min_lc_ratio =  None
-        self.max_lc_ratio =  None
+    def __init__(self):
+        self.unique_names =  None
+        self.nNeighbours =   None
+        #self.minData =       minData
+        self.test_size =     None
+        self.interpStep = None
+        self.endIndexes = None
+        #self.min_lc_ratio =  None
+        #self.max_lc_ratio =  None
         self.levelsNum =     None
-
+        self.time_Df = None
         # percent of noise data at each race
         self.minNoise = 0.3
-
-    def prepareAndPredict(self,df,filt,PredictedDf,missedName = '',missedField = '',by = ''):
-        unique_dict = self.addUniqueFields(df,list(by),missedField,missedName)
+    def checkDataBeforeSmooth(self,df,checkFields = None):
+        check = True
+        if not checkFields:
+            checkFields = ['NumUsers','NumRaces']
+        cols = [col for col in checkFields if col in df.columns.values]
+        checkVals = [1]*len(cols)
+        uniques = [list(df[col].unique()) for col in cols]
+        uniques = sum(uniques,[])
+        try:
+            if uniques == checkVals:
+                check = False
+        except:
+            print ""
+        return check
+    def prepareAndPredict(self,df,filt,PredictedDf,missedFields = None,checkFields = 'default',end = False):
+        """
+        initialize smoothing algorithm and check if dataframe should be smoothed
+        :param df: {pd.DataFrame}
+        :param filt: algorithm to filtrate {'median','kmeans'}
+        :param missedFields: additional fields will be missed after filtration
+        :param checkFields: field to check if dataframe should be smoothed
+        :param end: if smoothing is last.
+        :return:smooothed frame or input frame
+        """
+        quality = None
         if filt == 'kmeans':
-            predictedDict,quality = self.kmeansRegressor(df)
-            smoothed = self.combineColumns(predictedDict,unique_dict,quality)
+            check = self.checkDataBeforeSmooth(df,checkFields)
+            if check:
+                unique_dict = self.addUniqueFields(df,missedFields)
+                self.endIndexes,self.levelsNum = self.getBoundaries(df,end)
+                if self.levelsNum>=5:
+                    predictedDict,quality = self.kmeansRegressor(df,end = end)
+                    smoothed = self.combineColumns(predictedDict,unique_dict,quality)
+                else:
+                    smoothed = pd.DataFrame()
+            else:
+                smoothed = df
         if filt == 'median':
             smoothed = self.medianFilter(df)
         PredictedDf = pd.concat([PredictedDf,smoothed])
         return PredictedDf
     def check_uniqueness(self,df,unique_names):
+        """
+        check fields on uniqueness. If column contains more than one unique value -error will be raised
+        :param df:
+        :param unique_names:
+        :return:
+        """
         unique_dict = dict.fromkeys(unique_names)
         for name in unique_names:
             unique_values = list(df[name].drop_duplicates())
@@ -42,25 +77,36 @@ class Filters:
             else:
                 raise ValueError("To many other unique values at field %s : %s"%(name,unique_values))
         return unique_dict
-    def addUniqueFields(self,df,add_names,missedField,_name):
-        unique_dict = self.check_uniqueness(df,self.unique_names + add_names)
-        _count = len(df['race_id'].unique())
-        missed_dict = {_name:_count}
-        unique_dict.update(missed_dict)
+    def addUniqueFields(self,df,missedFields):
+        unique_dict = self.check_uniqueness(df,self.unique_names + missedFields)
         return unique_dict
-    def medianFilter(self,df,window = 9):
+    def medianFilter(self,df,window = 7):
+        """
+        Filter by median
+        :param df: frame to filter
+        :param window: rolling window
+        :return:filtered frame
+        """
         Filtered = pd.DataFrame()
         grouped = df.groupby(['User'])
         for user,gr in grouped:
             _gr = gr.copy()
             _gr.loc[:,'rawPower'] = _gr.loc[:,'Power']
             _gr.loc[:,'Power'] = medfilt(_gr['Power'],window)
-            #_gr.loc[:,'Power'] = pd.rolling_mean(_gr['Power'],window)
             Filtered = pd.concat([Filtered,_gr])
         return Filtered
     def kmeansRegressor(self,df,
                     algorithm = 'auto',
-                    w = 'default'):
+                    w = 'default',end = False):
+        """
+        smoothing data using k-means algorithm
+        :param df: dataframe to smooth
+        :param algorithm: algorithm of finding the neighbours. see the documentation to scipy kmeans regressor {str}
+        :param w: wigth {str}
+        :param end: if true bring ratios to the end points.Else use minumum - maximum boundaries {boolean}
+        :return: smoothed : smoothed dictionary with power and ratio keys
+                 quality  : R^2 coefficient
+        """
         if w == 'default':
             weights = ['uniform','distance']
         else:
@@ -89,14 +135,25 @@ class Filters:
         #model = AdaBoostRegressor(n_estimators=n_estimators)
         model = model.fit(t_train, y_train)
 
-        ti = np.linspace(self.min_lc_ratio, self.max_lc_ratio, self.levelsNum)[:, np.newaxis]
-        y_model = model.predict(ti)
+        #ti = np.linspace(self.min_lc_ratio, self.max_lc_ratio,self.levelsNum)[:, np.newaxis]
+        ti = self.endIndexes[:,np.newaxis]
+        try:
+            y_model = model.predict(ti)
+        except:
+            print ""
         y_model = np.around(y_model)
 
-        predictedCols = {'Power': y_model,'ratio': ti[:, 0]}
-        return predictedCols,quality
+        smoothed = {'Power': y_model,'ratio': ti[:, 0]}
+        return smoothed,quality
 
     def combineColumns(self,predictedDict,uniqueDict,predictedQuality):
+        """
+        combine predicted power and ratio columns with the other columns.
+        :param predictedDict: predicted dictionary {dict}
+        :param uniqueDict: dictionary of unique columns {dict}
+        :param predictedQuality: predicted quality
+        :return: binded dataframe {pd.DataFrame}
+        """
         quality = None
         if predictedQuality!=None:
             quality = float("%.2f"%predictedQuality)
@@ -106,8 +163,9 @@ class Filters:
         predictedDict.update(uniqueDict)
         df_aver = pd.DataFrame(predictedDict)
         return df_aver
+
     @staticmethod
-    def noisyUser(df,col = 'Power',window = 9):
+    def noisyUser(df,by,col = 'Power',window = 9):
         """
         Define user with maximum signal noise.
         :param df: pd.DataFrame contains several user's and per one laccid  {pd.DataFrame}
@@ -117,7 +175,7 @@ class Filters:
         """
         maxNoise = 0
         noises = {}
-        grouped = df.groupby(['User'])
+        grouped = df.groupby(by)
         for user,gr in grouped:
             user_fltrd = pd.rolling_median(gr[col],window,center = True)
             noisy_part = gr[user_fltrd != gr[col]].shape[0]/float(gr.shape[0])
@@ -127,12 +185,48 @@ class Filters:
             noises.update({user:noisy_part})
         return noisyUser,noises
 
-    def rollingMean(self,df,col,noises,window = 6):
+    def rollingMean(self,df,col,by = 'User',noises = None,window = 4):
+        """
+        smooth by rollin mean filter
+        :param df: input dataframe {pd.DataFrame}
+        :param col: column to smooth. 'Power', for ex {str}
+        :param by: column to groupby {str}
+        :param noises: value to compare user's noise. If defined, check if dataframe's noise more than minimum noise.{dict}
+        :param window: rolling window
+        :return: FilteredDf {pd.DataFrame}
+        """
         FilteredDf = pd.DataFrame()
-        grouped = df.groupby('User')
-        for user,gr in grouped:
-            _gr = gr.copy()
-            if noises[user]>self.minNoise:
-                _gr.loc[:,col] = pd.rolling_mean(_gr[col].interpolate(),window,center = True)
-            FilteredDf = pd.concat([FilteredDf,_gr])
+        rM = lambda gr,col,window: pd.rolling_mean(gr[col].interpolate(),window,center = True)
+        if by:
+            grouped = df.groupby(by)
+            for user,gr in grouped:
+                _gr = gr.copy()
+                if noises[user]>self.minNoise:
+                    _gr.loc[:,col] = rM(_gr,col,window)
+                FilteredDf = pd.concat([FilteredDf,_gr])
+        else:
+            FilteredDf = df.copy()
+            FilteredDf.loc[:,col] = rM(FilteredDf,col,window)
+        FilteredDf = FilteredDf[~FilteredDf[col].isnull()]
         return FilteredDf
+    def getBoundaries(self,df,end = False,col = 'ratio'):
+        """
+        Get col boundaries (min and max) and number of levels to create new smoothed dataframe
+        :param df: input dataframe
+        :param end: if true bring ratios to the end points.Else use minumum - maximum boundaries {boolean}
+        :col: column to find. default 'ratio'
+        :return:
+        """
+        lc_ratios = list(df[col])
+        if end:
+            lc_ratios = [i for i in lc_ratios if i>=0]
+            min_lc_ratio,max_lc_ratio = min(lc_ratios),max(lc_ratios)
+            bounds = np.searchsorted(self.time_Df[col],[min_lc_ratio,max_lc_ratio])
+            extractedDf = self.time_Df[bounds[0]:bounds[-1]].drop_duplicates()
+            ixs = extractedDf[col]
+            levelsNum = len(ixs)
+        else:
+            min_lc_ratio,max_lc_ratio = min(lc_ratios),max(lc_ratios)
+            levelsNum = (max_lc_ratio - min_lc_ratio) / self.interpStep
+            ixs = np.linspace(min_lc_ratio,max_lc_ratio,levelsNum)
+        return ixs,levelsNum

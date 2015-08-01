@@ -9,7 +9,7 @@ from datetime import datetime
 """
 -----------
 Before starting make sure that you have set
-the "pandas" and "numpy" libraryies
+the "pandas" and "numpy" libraries
 -----------
 This code works with nextgis_logger datasets.
 Each dataset presents folder with the next filling:
@@ -90,7 +90,7 @@ class BreakOnSections():
         """
         lOfRawDirs = os.listdir(self.input_dir)
         length = len(lOfRawDirs)
-        iter = 0
+        iter = 1
         for dir in lOfRawDirs:
             sys.stdout.write("\r" + str(dir) + " : " + str(iter) + "/" + str(length))
             sys.stdout.flush()

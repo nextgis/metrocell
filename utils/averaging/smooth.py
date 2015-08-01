@@ -1,34 +1,329 @@
 # coding=utf-8
-from sklearn.ensemble import AdaBoostRegressor
+__author__ = 'Alex'
+
 from scipy.stats import signaltonoise
 from filters import Filters
 import pandas as pd
-import numpy as np
-
 from utils import Utils
-import os
 
 class Smooth():
-    def __init__(self,correlator,filters
-                 ):
-        self.correlator = correlator
-        self.filters = filters
-
+    def __init__(self):
+        self.combinations = {'U':('User','NumRaces'),'R':('race_id','NumUsers')}
+        self.correlator = None
+        self.filters = None
         self.segmentTime = None
         self.predictionMethod = 'byCorr'
         self.reducingType = 'localMaxima'
         #Parameters to check if data corresponds to correlation computation algorithm
         # minimum length of signal
-        self.frameLength = 15
+        self.frameLength = 5
+        self.maxLag = 7.5
+        self.interpStep = None
         # ratio difference between 2 signals of one cell grabbed by two different users.
-        self.defaultDiff = 0.05 * 2
 
-        self.journal = pd.DataFrame()
+        self.journal = {'User':pd.DataFrame(),'race_id':pd.DataFrame()}
 
         self.ut = Utils()
         return
 
+
+    def initCombinations(self,df,combinations = 'RU'):
+        """
+        Initialize filter - move - smooth algorithms.
+        :param df: frame to predict. Must contain one laccid on segment!
+        :param combinations: sequence of litters,to identify an order of moving. 'R' - by race; 'U' - by user. {'RU','UR'}
+        :return: smoothed dataframe or input dataframe if
+        """
+        self.filters.interpStep = self.interpStep
+        by1,checkField1 = self.combinations[combinations[0]]
+        by2,checkField2 = self.combinations[combinations[1]]
+
+        self.defaultDiff = self.interpStep * self.maxLag
+        df = self.smoothByAlg(df,'median',by = 'race_id')
+        df = self.computeDataByRaces(df)
+        translated,fewDataDf = self.initMoving(df,by = [by1],checkField=checkField1)
+        if not translated.empty:
+            translated = self.computeDataByRaces(translated)
+            df = self.smoothByAlg(translated,'kmeans',missedFields= ['NumRaces',by1], by = by1,checkFields = [checkField1])
+            #if combinations == 'UR':
+                #df = self.interpolatePowers(df)
+            #df,qualities = self.smoothByAlg(df,'median',by = '')
+            #fewDataDf!!!
+            transFrame,fewDataDf2 = self.initMoving(df,checkField=checkField2,return_trans = True)
+            df = self.translateByShifts(translated,transFrame,excludeDf = fewDataDf2)
+            #self.filters.endIndexes,self.filters.levelsNum = self.getBoundaries(df,end = True)
+            Ideal = self.smoothByAlg(df,'kmeans',missedFields= ['NumRaces'],by = '',checkFields = [checkField1,checkField2],end = True) #,checkFields = [checkField2]
+            #IdealFiltered = self.filters.rollingMean(Ideal,'Power',by = '',window = 30)
+            return Ideal,fewDataDf
+        else:
+            return translated,fewDataDf
+            # for loop through the other data by User and say that each user's group is origin data
+
+    def smoothByAlg(self,df,filt,missedFields = None,by = '',checkFields = 'default',end = False):
+        """
+        group by column if need, initialize smoothing algorithm and concatenate the result
+        :param df: {pd.DataFrame}
+        :param filt: algorithm to filtrate {'median','kmeans'}
+        :param missedFields: additional fields will be missed after filtration
+        :param by: column to group
+        :param checkFields: field to check if dataframe should be smoothed
+        :param end: if smoothing is last.
+        :return: concatenated smoothed frames
+        """
+        PredictedDf = pd.DataFrame()
+        if by:
+            byField = df.groupby(by)
+            for index,gr in byField:
+                PredictedDf = self.filters.prepareAndPredict(gr,filt,PredictedDf,missedFields = missedFields,checkFields = checkFields,end = end)
+        else:
+            PredictedDf = self.filters.prepareAndPredict(df,filt,PredictedDf,missedFields = missedFields,checkFields = checkFields,end = end)
+        return PredictedDf
+
+    def initMoving(self,df,checkField,by = None,return_trans = False):
+        """
+        Initialize translation algorithm.
+        :param df: frame to translate {pd.DataFrame}
+        :param checkField: field to check if group contains more than one unique value. {'NumUsers','NumRaces'}
+        :param by: column to group by {str}
+        :param return_trans: whether or not need to return translation value. If true - return,else - return translated frame {boolean}
+        :return:UpdatedDf  : translated df {pd.DataFrame}
+                fewDataDf  : data frame contains "lack of data frames" {pd.DataFrame}
+                TransFrame : data frame contains translations per user or race {pd.DataFrame}
+        """
+
+        UpdatedDf = pd.DataFrame()
+        TransFrame = pd.DataFrame()
+        fewDataDf = pd.DataFrame()
+        if by:
+            groups = df.groupby(by)
+            for index, group in groups:
+                UpdatedDf, TransFrame,fewDataDf = self.move(group,TransFrame,UpdatedDf,fewDataDf,checkField = checkField,index = index)
+        else:
+            UpdatedDf, TransFrame,fewDataDf = self.move(df,TransFrame,UpdatedDf,fewDataDf,checkField = checkField)
+        print TransFrame
+        if not return_trans:
+            return UpdatedDf,fewDataDf
+        else:
+            return TransFrame,fewDataDf
+    def move(self,frame,TransFrame,UpdatedDf,fewDataDf,checkField,index = ''):
+        """
+        Initialize checking,preparing and moving algorithms
+        :param frame: input df {pd.DataFrame}
+        :param TransFrame: data frame contains translations per user or race {pd.DataFrame}
+        :param UpdatedDf: translated df {pd.DataFrame}
+        :param fewDataDf: data frame contains "lack of data frames" {pd.DataFrame}
+        :param checkField: field to check if group contains more than one unique value. {'NumUsers','NumRaces'}
+        :param index: group index {'race_id','User'}
+        :return:
+        """
+        if checkField == 'NumUsers':
+            loopBy = 'User'
+        if checkField == 'NumRaces':
+            loopBy =  'race_id'
+        readyToCorr = False
+        check = len(frame[loopBy].unique())
+        while (readyToCorr == False) or (frame.empty == True):
+            if check>1:
+                # move signal only if df contains more than  1 user
+                frame,originFrame,analyzedFrame,fewDataFrame,readyToCorr = self.prepareToCorrelation(frame,by = loopBy)
+                if not fewDataFrame.empty:
+                    fewDataDf = pd.concat([fewDataDf,fewDataFrame])
+                    check-=1
+                if readyToCorr:
+                    translations = self.loopThroughOrigins(originFrame,analyzedFrame,loopBy)
+                    updatedGroup,transFrame = self.getMovedData(frame,translations,loopBy,index)
+                    TransFrame = pd.concat([TransFrame,transFrame])
+                    UpdatedDf = pd.concat([UpdatedDf,updatedGroup])
+            else:
+                UpdatedDf = pd.concat([UpdatedDf,frame])
+                break
+        return UpdatedDf, TransFrame, fewDataDf
+    def getMovedData(self,df,trans,field,index = ''):
+        """
+        get translated Data
+        :param df: input df {pd.DataFrame}
+        :param trans: translation value {int}
+        :param field: field of group
+        :param index: field of index
+        :return:
+        """
+        updatedFrame,updatedTrans = self.updateRatios(df,trans,field,toTime= False)
+        transFrame = pd.DataFrame({index:updatedTrans}).transpose()
+        return updatedFrame,transFrame
+    def prepareToCorrelation(self,df,by):
+        """
+        prepare dataframe to correlation algorithm
+        :param df: input df {pd.DataFrame}
+        :param by: group by column
+        :return: df                     : input dataframe from
+                 originFrame            : frames to move
+                 analyzedFrameUpdated   : stable main frame contains the most really coordinates
+                 fewDataFrame           : lack of data frame
+                 readyToCorr            : if data frame is ready to be pushed to correlation algorithm
+        """
+        _df = df.copy()
+        fewDataFrame = pd.DataFrame()
+        if by == 'User':
+            self.startPoint,noises = Filters.noisyUser(_df,by,col = 'rawPower')
+            #df = self.filters.rollingMean(df,'Power',by = by,noises = noises)
+        if by == 'race_id':
+            self.startPoint = _df['race_id'].iloc[0]
+        analyzedFrame,originFrame = self.splitFrameByMinLen(_df,by)
+        analyzedFrameUpdated,readyToCorr = self.checkBoundaries(originFrame,analyzedFrame,by)
+        if (not readyToCorr):
+            _df.drop(analyzedFrame.index,inplace=True)
+            fewDataFrame = analyzedFrame
+        return _df,originFrame,analyzedFrameUpdated,fewDataFrame,readyToCorr
+    def loopThroughOrigins(self,originFrame,analyzedFrame,loopBy):
+        """
+        loop through the origin data frame and get the translation for each of them
+        :param originFrame: : frames to move  {pd.DataFrame}
+        :param analyzedFrame: stable main frame contains the most really coordinates {pd.DataFrame}
+        :param loopBy:  group by column {str]
+        :return:translations {dict]
+        """
+        jname = loopBy
+        analyzedData = self.extractDataToAnalyze(analyzedFrame,loopBy)
+        translations = {analyzedData[loopBy]:0}
+        originGroups = originFrame.groupby(loopBy)
+        for index,originGroup in originGroups:
+            trans = self.getTranslation(originGroup,analyzedData,loopBy,jname = jname)
+            translations.update(trans)
+        translations = self.shiftbyValue(translations,self.startPoint,analyzedData[loopBy])
+        return translations
+    def getTranslation(self,originGroup,analyzedData,loopBy,jname):
+        """
+        initialize the correlation algorithm and get the translation
+        :param originGroup: frame (of one group!) to move
+        :param analyzedData: stable main array {np.array}
+        :param loopBy:  group by column {str]
+        :param jname: name of journal to save the results of correlation
+        :return:
+        """
+        trans = {}
+        predictedPart = self.correlator.loopThroughLaccid(originGroup,self.predictionMethod,analyzedData['section'],self.reducingType)
+        if not predictedPart.empty:
+            processedPart = self.correlator.reducePredPowerCorrSamples(predictedPart)
+            predictedPoints = processedPart[processedPart['controls'] == 1]
+            predictedPoint = predictedPoints.iloc[0]
+            delta = predictedPoint['ratio'] - analyzedData['ratio']
+            self.toJournal(predictedPoints,jname)
+            trans = {predictedPoint[loopBy]:delta}
+        return trans
+    def toJournal(self,row,jname):
+        """
+        push correlation result to journal
+        :param row:  row contains information about passed correlation algorithm {pd.DataFrame}
+        :param jname: key name of journal
+        :return:
+        """
+        self.journal[jname] = pd.concat([self.journal[jname],row])
+    def updateRatios(self,df,translations,field,toTime = False):
+        """
+        Translate frame along ratio axis
+        :param df: frame to translate {pd.DataFrame}
+        :param translations: translations dictionary {dict}
+        :param field: key field
+        :param toTime: translate ratio to time {boolean}
+        :return: updatedDf    : translated dataFrame
+                 translations : translations dictionary (may be need to return if it has been translated to time)
+        """
+        updatedDf = pd.DataFrame()
+        for k in translations.keys():
+            userDf = df[df[field] == k].copy()
+            userDf.loc[:,'ratio'] -=translations[k]
+            if toTime:
+                translations[k] = translations[k]*self.segmentTime
+            updatedDf = pd.concat([updatedDf,userDf])
+        return updatedDf,translations
+
+    def shiftbyValue(self,trans,startPoint,analyzedPoint):
+        """
+        Shift 0 point from analyzed(containing minimum data length) to main (containing the most noisy Powers)
+        :param trans: key = User, value = delta ratios{dict}
+        :param mainUser: shift to
+        :param analyzedUser: shift from
+        :return: origin dict with updated values {dict}
+        """
+        if startPoint in trans.keys():
+            shift = trans[startPoint] - trans[analyzedPoint]
+            for point in trans.keys():
+                trans[point] = trans[point] - shift
+        return trans
+    def extractDataToAnalyze(self,analyzedFrame,by):
+        """
+        extract section,ratio and 'by' field value from analyzed Df
+        :param analyzedFrame: frame to analyze {pd.DataFrame}
+        :param by: group by column {str}
+        :return: {dict}
+        """
+        section  = analyzedFrame['Power'].__array__()
+        lastRatio = analyzedFrame.iloc[-1]['ratio']
+        fieldVal = analyzedFrame.iloc[0][by]
+        data = {'section':section,'ratio':lastRatio,by:fieldVal}
+        return data
+    def splitFrameByMinLen(self,df,by):
+        """
+        find section with the lowest delta ratio (only if it more than default min)
+        and assign it as analyzed section
+        :return:
+        """
+        analyzedField = df.groupby(by).apply(len).argmin()
+        keys = df.groupby(by).groups.keys()
+        if len(keys)>1:
+            analyzedFrame = df[df[by] == analyzedField]
+            originFrame = df[df[by] != analyzedField]
+        else:
+            analyzedFrame = pd.DataFrame()
+            originFrame = df
+        return analyzedFrame,originFrame
+    def lastFirstDelta(self,frame,col):
+        delta = frame.iloc[-1][col] - frame.iloc[0][col]
+        return delta
+    def checkBoundaries(self,originFrame,analyzedFrame,by):
+        """
+        check if boundaries length more than default minumum
+        :param originFrame: : frames to move  {pd.DataFrame}
+        :param analyzedFrame: stable main frame contains the most really coordinates {pd.DataFrame}
+        :by: column to group
+        """
+
+        readyToCorr = True
+        mainDeltaRatios = self.lastFirstDelta(analyzedFrame,'ratio')
+        if mainDeltaRatios > 2*self.defaultDiff:
+            grouped = originFrame.groupby(by)
+            for index,gr in grouped:
+                userDeltaRatios = self.lastFirstDelta(gr,'ratio')
+                boundaries = userDeltaRatios - self.defaultDiff
+                diff = mainDeltaRatios - boundaries
+                if diff>0:
+                    # clip by new boundaries
+                    analyzedFrame = self.clipByBoundaries(analyzedFrame,diff/2)
+                    if len(analyzedFrame) < self.frameLength:
+                        readyToCorr = False
+                        break
+                    else:
+                        mainDeltaRatios = self.lastFirstDelta(analyzedFrame,'ratio')
+        else:
+            readyToCorr = False
+        return analyzedFrame,readyToCorr
+
+
+    def clipByBoundaries(self,frame,clip):
+        """
+        clip frame by ratio boundaries
+        :param frame: df to clip{pd.DataFrame}
+        :param clip: clip value {float}
+        """
+        r_bound = max(frame['ratio'])-clip
+        l_bound = min(frame['ratio'])+clip
+        analyzedFrame = frame[(frame['ratio']<r_bound)&(frame['ratio']>l_bound)]
+        return analyzedFrame
+
     def mainUserByNoise(self,df):
+        """
+        Identify main User according to the theory that the most noisy signal has the most actual coordinates
+        """
         mainSTN = -10000
         grouped = df.groupby('User')
         for user,gr in grouped:
@@ -41,149 +336,39 @@ class Smooth():
             raise ValueError("Can't compute signal to noise value")
         print mainUser,mainSTN
         return mainUser
-
-    def lastFirstDelta(self,frame,col):
-        delta = frame.iloc[-1][col] - frame.iloc[0][col]
-        return delta
-    def checkBoundaries(self,originFrame,analyzedFrame):
-        readyToCorr = True
-        mainDeltaRatios = self.lastFirstDelta(analyzedFrame,'ratio')
-        grouped = originFrame.groupby('User')
-        for indx,gr in grouped:
-            userDeltaRatios = self.lastFirstDelta(gr,'ratio')
-            boundaries = userDeltaRatios - self.defaultDiff
-            diff = mainDeltaRatios - boundaries
-            if diff>0:
-                # clip by new boundaries
-                analyzedFrame = self.clipByBoundaries(analyzedFrame,diff/2)
-                mainDeltaRatios = self.lastFirstDelta(analyzedFrame,'ratio')
-        if len(analyzedFrame) < self.frameLength:
-            readyToCorr = False
-        return analyzedFrame,readyToCorr
-
-
-    def clipByBoundaries(self,frame,clip):
-        r_bound = max(frame['ratio'])-clip
-        l_bound = min(frame['ratio'])+clip
-        analyzedFrame = frame[(frame['ratio']<r_bound)&(frame['ratio']>l_bound)]
-        return analyzedFrame
-
-    def initCombinations(self,df,combinations = 'default'):
-        # 4 steps:
-        # 1. smooth by Races.
-        # 2. smooth using ??? method to get an ideal line.
-        # 3. lead to the one ratio based on the "lag theory".
-        # 4. smooth by Users.
-        filtered = self.smoothByAlg(df,'median')
-        translated = self.moveAlongRatio(filtered,by = ['race_id'],powerColumn = 'medFilt')
+    def computeDataByRaces(self,df):
         """
-        byUsers = self.smoothByAlg(df,'kmeans',missedField = 'race_id',by = 'User')
-        Ideal = self.smoothByAlg(byUsers,'kmeans',missedField = 'User',by = '')
+        compute the number of races and users per each race
         """
-        return translated
-            # for loop through the other data by User and say that each user's group is origin data
-    def smoothByAlg(self,df,filt,missedField = '',by = ''):
-        missedName = 'Num' + missedField
-        PredictedDf = pd.DataFrame()
-        if by:
-            byField = df.groupby(by)
-            for index,gr in byField:
-                PredictedDf = self.filters.prepareAndPredict(gr,filt,PredictedDf,missedName,missedField,by)
-        else:
-            PredictedDf = self.filters.prepareAndPredict(df,filt,PredictedDf)
-        return PredictedDf
-
-    def moveAlongRatio(self,df,by = None,powerColumn = 'Power'):
-        #mainDf = df[df['User'] == mainUser]
-        UpdatedDf = pd.DataFrame()
-        TransFrame = pd.DataFrame()
-        if by:
-            groups = df.groupby(by)
-            for index, group in groups:
-                updatedGroup,transFrame = self.getMovedData(group,index)
-                TransFrame = pd.concat([TransFrame,transFrame])
-                UpdatedDf = pd.concat([UpdatedDf,updatedGroup])
-            print TransFrame
-        else:
-            UpdatedDf,updatedTrans = self.getMovedData(df)
-        return UpdatedDf
-    def getMovedData(self,df,index = ''):
-        df,trans = self.initMovingAlongAxis(df)
-        updatedFrame,updatedTrans = self.updateRatios(df,trans,toTime= False)
-        transFrame = pd.DataFrame({index:updatedTrans}).transpose()
-        return updatedFrame,transFrame
-    def initMovingAlongAxis(self,df):
-        trans = {}
-        df,originFrame,analyzedFrame,readyToCorr = self.prepareToCorrelation(df)
-        if readyToCorr:
-            trans = self.loopThroughOriginUsers(originFrame,analyzedFrame)
-        return df,trans
-
-    def prepareToCorrelation(self,df):
-        #self.mainUser = self.mainUserByNoise(df)
-        self.mainUser,noises = Filters.noisyUser(df,'rawPower')
-        dfFiltered = self.filters.rollingMean(df,'Power',noises)
-        analyzedFrame,originFrame = self.splitFrameByMinLen(dfFiltered)
-        analyzedFrame,readyToCorr = self.checkBoundaries(originFrame,analyzedFrame)
-        return dfFiltered,originFrame,analyzedFrame,readyToCorr
-    def loopThroughOriginUsers(self,originFrame,analyzedFrame):
-        #mainUser = 'Anna'
-        #analyzedFrame = self.clipByBoundaries(analyzedFrame,clip = 0.05)
-        analyzedData = self.extractDataToAnalyze(analyzedFrame)
-        trans = {analyzedData['User']:0}
-        originGroups = originFrame.groupby('User')
-        for index,originGroup in originGroups:
-            predictedPart = self.correlator.loopThroughLaccid(originGroup,self.predictionMethod,analyzedData['section'],self.reducingType)
-            if not predictedPart.empty:
-
-                processedPart = self.correlator.reducePredPowerCorrSamples(predictedPart)
-                predictedPoints = processedPart[processedPart['controls'] == 1]
-                if len(predictedPoints) == 1:
-                    predictedPoint = predictedPoints.iloc[0]
-                    delta = predictedPoint['ratio'] - analyzedData['ratio']
-                    self.toJournal(predictedPoints)
-                    trans.update({predictedPoint['User']:delta})
-                else:
-                    print ""
-        trans = self.shiftbyValue(trans,self.mainUser,analyzedData['User'])
-        return trans
-    def toJournal(self,row):
-        self.journal = pd.concat([self.journal,row])
-    def updateRatios(self,df,translations,toTime = False):
-        updatedDf = pd.DataFrame()
-        for user in translations.keys():
-            userDf = df[df['User'] == user].copy()
-            userDf.loc[:,'ratio'] -=translations[user]
-            if toTime:
-                translations[user] = translations[user]*self.segmentTime
-            updatedDf = pd.concat([updatedDf,userDf])
-        return updatedDf,translations
-
-    def shiftbyValue(self,trans,mainUser,analyzedUser):
+        df_updated = pd.DataFrame()
+        _df = df.copy()
+        _df.loc[:,'NumRaces'] =len(_df.race_id.unique())
+        _grouped = _df.groupby('race_id')
+        for race_id,gr in _grouped:
+            gr.is_copy = False
+            gr.loc[:,'NumUsers'] = len(gr.User.unique())
+            df_updated = pd.concat([df_updated,gr])
+        return df_updated
+    def translateByShifts(self,df,transFrame,by = 'race_id', excludeDf = pd.DataFrame()):
         """
-
-        :param trans: key = User, value = delta ratios{dict}
-        :param mainUser: shift to
-        :param analyzedUser: shift from
-        :return: origin dict with updated values {dict}
-        """
-        if mainUser in trans.keys():
-            shift = trans[mainUser] - trans[analyzedUser]
-            for user in trans.keys():
-                trans[user] = trans[user] - shift
-        return trans
-    def extractDataToAnalyze(self,analyzedFrame):
-        section  = analyzedFrame['Power'].__array__()
-        lastRatio = analyzedFrame.iloc[-1]['ratio']
-        user = analyzedFrame.iloc[0]['User']
-        data = {'section':section,'ratio':lastRatio,'User':user}
-        return data
-    def splitFrameByMinLen(self,df):
-        """
+        translate dataframe by shifts
+        :param df: {pd.DataFrame}
+        :param transFrame: {pd.DataFrame}
+        :param by: column to groupby {str}
+        :param excludeDf: frame need to exclude from tranlation
         :return:
         """
-        # find section with the lowest delta ratio if it more than default and than say that it is analyzed section
-        analyzedUser = df.groupby('User').apply(len).argmin()
-        analyzedFrame = df[df['User'] == analyzedUser]
-        originFrame = df[df['User'] != analyzedUser]
-        return analyzedFrame,originFrame
+        if not excludeDf.empty:
+            df.drop(excludeDf.index,inplace = True )
+        if not transFrame.empty:
+            UpdatedDf = pd.DataFrame()
+            grouped = df.groupby(by)
+            for ix,gr in grouped:
+                _gr = gr.copy()
+                if ix in transFrame.columns.values:
+                    translation = transFrame.irow(0)[ix]
+                    _gr.loc[:,'ratio'] -=translation
+                    UpdatedDf = pd.concat([UpdatedDf,_gr])
+            return UpdatedDf
+        else:
+            return df

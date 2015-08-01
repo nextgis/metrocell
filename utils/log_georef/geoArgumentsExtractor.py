@@ -1,12 +1,12 @@
 # coding=utf-8
 __author__ = 'yellow'
 import math
-from geojsonC import GeojsonConn
+import string
 
 class GeoArgumentsExtractor():
 
-    def __init__(self, geojsonConn):
-        self.geojsonConn = geojsonConn
+    def __init__(self, geoFilesConn):
+        self.geoFilesConn = geoFilesConn
         return
     def extract_key_pts(self,log_entries):
         """
@@ -25,11 +25,22 @@ class GeoArgumentsExtractor():
         simple algorithm use track distance, key timestamps of changing movement type and 
         """
         segment_pars = {'a1':None,'a2':None,'v_const':None}
-        segment_length = self.geojsonConn.get_segment_length(line_id)
+        segment_length = self.geoFilesConn.get_segment_length(line_id)
         segment_pars['v_const'] = 2 * segment_length/(key_pts[2] + key_pts[3] - key_pts[1] - key_pts[0])
         segment_pars['a1'] = segment_pars['v_const']/(key_pts[1] - key_pts[0])
         segment_pars['a2'] = - segment_pars['v_const']/(key_pts[3] - key_pts[2])
         return segment_pars
+    def stationsId(self,name):
+        """
+        extract stations Identifiers by the filename
+        :param fname: filename {str}
+        :return:stations: dictionary with keys '_from' (station from) and '_to' ( station to ){dict}
+        """
+        stations = {}
+        l = string.split(name,'-')
+        stations['_from'] = l[0]
+        stations['_to'] = l[1]
+        return stations
     def get_dist_delta(self,alg_key,log_entrty_ts,key_pts,segment_pars):
         """
         the values represent the next type of movements:
