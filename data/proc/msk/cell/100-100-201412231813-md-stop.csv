@@ -1,0 +1,24 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power,race_id
+1002,Ленинский проспект 2,md,1419347617461,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347617654,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347618691,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347619704,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347620723,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347621738,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347622770,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347623818,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347624832,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347625847,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347626868,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347627919,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347628949,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1419347391
+,ServiceLog,md,1419347629979,2G,EDGE,1,250,1,770,543,-1,-73,1419347391
+,ServiceLog,md,1419347630996,2G,EDGE,1,250,1,770,543,-1,-73,1419347391
+,ServiceLog,md,1419347632039,2G,EDGE,1,250,1,770,543,-1,-77,1419347391
+,ServiceLog,md,1419347633085,2G,EDGE,1,250,1,770,543,-1,-77,1419347391
+,ServiceLog,md,1419347634144,2G,EDGE,1,250,1,770,543,-1,-77,1419347391
+,ServiceLog,md,1419347635191,2G,EDGE,1,250,1,770,543,-1,-73,1419347391
+,ServiceLog,md,1419347636208,2G,EDGE,1,250,1,770,543,-1,-73,1419347391
+,ServiceLog,md,1419347637248,2G,EDGE,1,250,1,770,543,-1,-73,1419347391
+,ServiceLog,md,1419347638283,2G,EDGE,1,250,1,770,543,-1,-73,1419347391
+1003,Ленинский проспект 3,md,1419347638751,2G,EDGE,1,250,1,770,543,-1,-73,1419347391

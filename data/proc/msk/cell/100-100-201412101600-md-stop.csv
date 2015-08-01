@@ -1,0 +1,31 @@
+ID,Name,User,TimeStamp,NetworkGen,NetworkType,Active,MCC,MNC,LAC,CID,PSC,Power,race_id
+1002,Ленинский проспект 2,md,1418216433908,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216434890,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216435953,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216437071,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216438115,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216439154,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216440212,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216441274,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216442338,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216443390,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216444446,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216445499,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216446551,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216447605,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216448665,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216449734,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216450788,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216451849,unknown,unknown,1,-1,-1,-1,-1,-1,-1,1418216276
+,ServiceLog,md,1418216452898,2G,EDGE,1,250,1,770,543,-1,-79,1418216276
+,ServiceLog,md,1418216454017,2G,EDGE,1,250,1,770,543,-1,-79,1418216276
+,ServiceLog,md,1418216455058,2G,EDGE,1,250,1,770,543,-1,-79,1418216276
+,ServiceLog,md,1418216456115,2G,EDGE,1,250,1,770,543,-1,-63,1418216276
+,ServiceLog,md,1418216457176,2G,EDGE,1,250,1,770,543,-1,-63,1418216276
+,ServiceLog,md,1418216458237,2G,EDGE,1,250,1,770,543,-1,-63,1418216276
+,ServiceLog,md,1418216459296,2G,EDGE,1,250,1,770,543,-1,-63,1418216276
+,ServiceLog,md,1418216460369,2G,EDGE,1,250,1,770,543,-1,-63,1418216276
+,ServiceLog,md,1418216461459,2G,EDGE,1,250,1,770,543,-1,-63,1418216276
+,ServiceLog,md,1418216462524,2G,EDGE,1,250,1,770,543,-1,-67,1418216276
+,ServiceLog,md,1418216463582,2G,EDGE,1,250,1,770,543,-1,-67,1418216276
+1003,Ленинский проспект 3,md,1418216464330,2G,EDGE,1,250,1,770,543,-1,-67,1418216276
