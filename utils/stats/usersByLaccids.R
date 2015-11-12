@@ -1,13 +1,11 @@
-setwd("~/GitHub/metrocell/data/referenced/msk/cell")
-df = read.csv("pre_log_points-stops.csv",sep = ",")
-setwd("~/GitHub/metrocell/data/")
-smoothed = read.csv("Cells_smoothed_ref-200.csv",sep = ",")
-saveFolder = "C:/temp/plots/stats/UsersbyLaccids2"
+df = read.csv("C:/temp/metrocell/averaged/spb/MegaPhone/pre_log_points-2G.csv",sep = ",")
+#smoothed = read.csv("Cells_smoothed_ref-200.csv",sep = ",")
+saveFolder = "C:/temp/metrocell/averaged/spb/plots/UsersbyLaccids"
 
 library(ggplot2)
 
-data = smoothed[smoothed$NumRaces>3,]
-segs = unique(data$segment)
+
+segs = unique(df$segment)
 
 for (seg in segs){
   seg_df = df[df$segment == seg,]

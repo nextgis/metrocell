@@ -204,8 +204,9 @@ class GenerateRaces():
             if not stopOrInterIds[0] == stopOrInterIds[1]:
                 check = self.compareWithGraph(stopOrInterIds,self.interGraph)
                 if not check:
-                    interErrorsDf = self.concatErrorSlice(marksDf,interErrorsDf, stopOrInterIxs[0],stopOrInterIxs[1],'inter')
+                    interErrorsDf = self.concatErrorSlice(marksDf, interErrorsDf, stopOrInterIxs[0], stopOrInterIxs[1], 'inter')
                 else:
+                    #something strange!check!
                     if (stopOrInterIxs[1]-stopOrInterIxs[0]==1):
                         marksDf.loc[stopOrInterIxs[0]:stopOrInterIxs[1],'inter'] = 1
             else:

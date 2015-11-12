@@ -17,7 +17,8 @@ class PrepareAndSplit():
                  moveGraphClosedPath,
                  mainUser = None
                  ):
-        self.availableDevices = ['cell','sensor','external']
+        #self.availableDevices = ['cell','sensor','external']
+        self.availableDevices = ['cell','sensor']
         self.moveTypes = ['move','stop','inter']
 
         self.inputRawDir = inputRawDir

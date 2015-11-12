@@ -39,9 +39,9 @@ class BringingToSingleTime():
         mainCellLogFile = pd.io.parsers.read_csv(mainCellLogFilePath,sep = ";")
         mainCellMarkFile = pd.io.parsers.read_csv(mainCellMarkFilePath,sep = ";")
 
-        # use only the "base station" marks!
-        mainCellMarkFile = mainCellMarkFile[mainCellMarkFile['Active'] == 1]
-        #self.writeSessionSaveFrames(mainRow,sessionId)
+        # use only "base station" marks!
+        mainCellMarkFile = mainCellMarkFile[mainCellMarkFile['Active'].apply(str) == '1']
+        # self.writeSessionSaveFrames(mainRow,sessionId)
         mainUserFirstStamp = mainCellLogFile['TimeStamp'][0]
         otherUsers = usersFrame[usersFrame['mainUser'] == 0].index
         sessionId = mainCellMarkFile.session_id.unique()[0]

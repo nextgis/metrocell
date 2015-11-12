@@ -131,6 +131,9 @@ class Filters:
         if best_params == (None, None):
             raise ValueError("No best parameters!")
         n_count,weight = best_params
+
+        print "bestParams : " + str(best_params[0]) + " : " + str(best_params[1])
+
         model = neighbors.KNeighborsRegressor(n_neighbors=n_count,algorithm = algorithm,weights = weight)
         #model = AdaBoostRegressor(n_estimators=n_estimators)
         model = model.fit(t_train, y_train)

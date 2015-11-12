@@ -25,7 +25,7 @@ def main():
     parser.add_argument('-e', '--exclude-stops', action='store_true', help='Exclude "-stop" files')
     parser.add_argument('-b', '--bind-to-csv', action = 'store_true',help = 'Write out to one csv- dataFrame')
     parser.add_argument('-s', '--stations', type = str,help = 'Stations CSV file')
-    #parser.add_argument('-sC','--stationsClosed',type = str,help = 'Stations CSV file which were closed')
+    parser.add_argument('-sC','--stationsClosed',type = str,help = 'Stations CSV file which were closed')
     parser.add_argument('input_log', type=str, help='DIR or single Log file in CVS format for one segment')
     parser.add_argument('output_csv', type=str, help='DIR or single Result file with coordinates in CSV format')
 

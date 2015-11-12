@@ -20,12 +20,12 @@ optional arguments:
                         GeoJSON file in EPSG:3857 dissolved by stations
   -m {single,batch}, --mode {single,batch}
                         Process one file or dir of files
-  -g, --geojson         Write out GeoJSON files with all rows from input CSV
+  -g --geojson         Write out GeoJSON files with all rows from input CSV
                         files
-  -e, --exclude-stops   Exclude "-stop" files
-  -b' --bind-to-csv     Write out to one csv - dataFrame
-  -s' --stations        Stations CSV file
+  -e --exclude-stops   Exclude "-stop" files
+  -b --bind-to-csv     Write out to one csv - dataFrame
+  -s --stations        Stations CSV file
 
 Example:
-/geo_ref.py -b -e -g -m batch -l ../../segments/raw/msk/metro_lines_disolved_3857.geojson -s .../metro4all/data/msk/stations.csv  ../../data/proc/msk/cell/ ~/GIS/metro/out_data/
+/geo_ref.py -b -e -g -m batch -l ../../segments/raw/msk/metro_lines_disolved_3857.geojson -s .../metro4all/data/msk/stations.csv  ../../data/proc/msk/cell/ ../../data/referenced/msk/cell
 ```

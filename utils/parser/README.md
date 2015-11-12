@@ -18,16 +18,24 @@ optional arguments:
 -b      --bring                 Bring to a single time or not(need to store if input directory contains session-folders)
   
 Example:
-/prepareAndSplit.py -i ...\...\data\msk\interchanges.csv -m ...\...\data\msk\graph.csv -mC ...\...\closed\msk\graph.csv ...\...\data\raw\msk ...\...\data\splitterOutput
+-i
+C:\Users\Alex\Documents\GitHub\metro4all\data\spb\interchanges.csv
+-m
+C:\Users\Alex\Documents\GitHub\metro4all\data\spb\graph.csv
+C:\temp\metrocell\logs\spb
+C:\Users\Alex\Documents\GitHub\metrocell\data\proc\spb
+-u
+natalie
+-b
 ```
 
 After finish you will have 3 folders ['cell','sensor','external'] with parsed logs 
-and 'error' folder containing errors dataFrames. each dataFrame will have the next template
+and 'error' folder contained errors dataFrames. each dataFrame will have the next template
 (analyze each group with identical errorIndex separately):
 ID          [int]    identifier of the station
 Name        [str]    name of the station
 inter       [-1]     if this and the previous( or the next) stations have not been founded at the interchanges graph dictionary 
-move        [-1]     if station from - station to graph have not been founded at the move graph dictionary      
+move        [-1]     if "station from - station to" graph have not been founded at the move graph dictionary      
 sequence    [-1]     sequence error. truth sequence has [StationI[3]-StationI[4]-StationII[1]-StationII[2]] sequence
 stationId   [-1]     if mark has been entered incorrectly. for example instead of 'Новокузнецкая' 'новокуз' has been written. Then identifier of station will be equal to -1. 
 errorIndex  [random] identifier of error. for each section it will be different. 

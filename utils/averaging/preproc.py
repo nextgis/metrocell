@@ -5,11 +5,12 @@ import numpy as np
 import paths
 from utils import Utils
 class Preproc():
-    def __init__(self,df,users = []):
+    def __init__(self,df,activeBagPath,users = []):
         self.users = users
         self.df = df
-        self.netOperators = {'25099':'Beeline','25001':'MTS','25002':'MegaPhone'}
+        self.netOperators = {'25099':'Beeline','25001':'MTS','25002':'MegaFon'}
         self.gens = ['4G','3G','2G']
+        self.activeBagPath = activeBagPath
         return
     def proc_cell_df(self):
         """
@@ -40,15 +41,21 @@ class Preproc():
         #exclude cells that have no lac,cid (fields contain "-1") and Power > 0(this means NoSignal)
         self.df = self.df[(self.df['LAC']>0)
                     &(self.df['CID']>0)
-                    &(self.df['Power']<0)
+                    #&(self.df['Power']<0)
                     #&(self.df['Power']>-113)
                     #&(self.df['NetworkType']!='unknown')
-                    #&(self.df['NetworkGen']!='unknown')
+                    &(self.df['NetworkGen']!='unknown')
                     #&(self.df['MCC']!=-1)
                     #&(self.df['MNC']!=-1)
                     #&(self.df['PSC']!=-1)
                       ]
+
         self.df = self.excludeActiveBag(self.df)
+
+        self.df.loc[self.df['Active']!='1','MNC'] = self.df[self.df['Active']!='1']['Active'].apply(lambda x : x.split('-')[1])
+        self.df.loc[self.df['Active']!='1','MCC'] = self.df[self.df['Active']!='1']['Active'].apply(lambda x : x.split('-')[0])
+
+
 
         self.df.drop(['Unnamed: 0'],axis=1,inplace=True)
         self.df['index'] = range(0,self.df.shape[0])
@@ -65,7 +72,7 @@ class Preproc():
         _df = df.copy()
         _df['ACTIVE'] = f(_df,'MCC') + "-" + f(_df,'MNC') + "-" + f(_df,'LAC')  + "-" +f(_df,'CID')
         activeBag = _df[_df['ACTIVE'] == _df['Active']]
-        activeBag.to_csv('C:\\temp\\test\\activeBag.csv')
+        activeBag.to_csv(self.activeBagPath)
         _df = _df.drop(activeBag.index)
         _df = _df.drop(['ACTIVE'],axis = 1)
         return _df
@@ -105,7 +112,7 @@ class Preproc():
         return pathTime
 
     def splitByNetworkAndSave(self,path,mkey = ''):
-        df = self.df
+        df = self.df.copy()
         df['netOperators'] = df.MCC.apply(str) +df.MNC.apply(str).apply(lambda x : x.zfill(2))
         netOperators = df.netOperators.unique()
         for operator in netOperators:
@@ -120,7 +127,14 @@ class Preproc():
                         operatorDf_gen =  operatorDf[operatorDf.NetworkGen == gen]
                         operatorDf_gen.to_csv(pathToSave)
 
-
+    def exclude_constant_signals(self):
+        """
+        avoid situations when signal is constant on exact segment in exact race for exact user
+        :return:
+        """
+        grouped = self.df.groupby(['NetworkGen','MNC','race_id','User','laccid','segment'])
+        self.df = grouped.filter(lambda x: len(np.unique(x['Power']))>1)
+        return self.df
 if __name__ == "__main__":
     Df = pd.io.parsers.read_csv(paths.preLogPointsPath)
     delta_ts = Preproc.computeAverTime(Df,_output=paths.subwayInfo)

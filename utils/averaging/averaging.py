@@ -1,6 +1,6 @@
 __author__ = 'Alex'
 
-import paths
+
 import pandas as pd
 import numpy as np
 import sys
@@ -14,7 +14,7 @@ from argparse import ArgumentParser
 from posAlgorithm import SignalCorrelator
 from filters import Filters
 class Averaging():
-    def __init__(self,preproc,average,georef,pushToDb,subwayInfoDf,mkey,_input,_output):
+    def __init__(self,preproc,average,georef,pushToDb,subwayInfoDf,mkey,lines_path,_input,_output):
         self.preproc = preproc
         if not self.preproc:
             self.subwayInfoDf = subwayInfoDf
@@ -22,21 +22,26 @@ class Averaging():
         self.georef = georef
         self.push = pushToDb
         self.mkey = mkey
+        self.tabname = 'cell'
+        self.segments_geojson_path = lines_path
         self.input = _input
         self.output = _output
         if self.output:
             self.preLogPointsPath = self.output + "\\pre_log_points.csv"
-            self.saveCellSmoothed = self.output + "\\Cells_smoothed_ref-200-sm2.csv"
+            #self.saveCellSmoothed = self.output + "\\Cells_smoothed_ref-200-Full_with_1Meas.csv"
+            self.saveCellSmoothed = self.output + "\\Cells_smoothed_ref-200-MegaFon-2G.csv"
             self.testDfPath = self.output + "\\testSets.csv"
             self.jpath = self.output + "\\journals\\"
             self.segInfoPath = self.output + "\\segmentsStepsDf.csv"
+            self.activeBagPath = self.output + "\\activeBag.csv"
         if self.push:
             self.db_output = self.output + "\\Cells_smoothed_ref-200"
             self.subwayInfoPath = self.output + "\\subwayInfo.csv"
 
         self.filters = Filters()
         # save after filtration
-        self.filters.unique_names = ['segment','NetworkType','NetworkGen','LAC','CID','laccid','segment_start_id','segment_end_id']
+        #self.filters.unique_names = ['segment','NetworkType','NetworkGen','LAC','CID','laccid','segment_start_id','segment_end_id']
+        self.filters.unique_names = ['segment','NetworkGen','LAC','CID','laccid','segment_start_id','segment_end_id']
         # the number of neighbours (for kNeighbours method of averaging)
         self.filters.nNeighbours = 50
         # the minimum number of rows for collected LACCID as input parameter (for kNeighbours method of averaging)
@@ -54,7 +59,7 @@ class Averaging():
         self.Lcdelta = 15 # MUST BE IDENTICAL IN SMOOTH MODULE!
         #instances
         self.ut = Utils()
-        self.geojsonConn = GeoFilesConn(paths.segments_geojson_path,'CODE')
+        self.geojsonConn = GeoFilesConn(self.segments_geojson_path,'CODE')
 
         self.interpolator = PointInterpolator(self.geojsonConn)
         self.correlator = SignalCorrelator()
@@ -75,7 +80,6 @@ class Averaging():
                 fpath = self.jpath  + Utils.fromCurrentTime(jname,'.csv')
                 self.powerAveraging.journal[jname].to_csv(fpath)
             self.segmentsStepsDf.to_csv(self.segInfoPath,index_label='index')
-
     def pushToDb(self):
         """
         Pushing data to database
@@ -84,9 +88,9 @@ class Averaging():
         self.aver_df.drop(self.dropnames,inplace = True, axis = 1)
         for id in ['segment_start_id','segment_end_id']:
             self.aver_df[id] = self.aver_df[id].apply(int)
-        db = Dbase(paths.output_db,key = "")
+        db = Dbase(self.db_output,key = "")
         db.connection.text_factory = str
-        self.aver_df.to_sql(paths.tabname,con = db.connection)
+        self.aver_df.to_sql(self.tabname,con = db.connection)
         db.connection.close()
     def preprocData(self,Df,badUsers):
         """
@@ -98,13 +102,17 @@ class Averaging():
         if self.mkey!= '':
             self.mkey = "-" + self.mkey
         self.preprocDf = Preproc(df = Df,
-                                   users = badUsers)
+                                 activeBagPath = self.activeBagPath,
+                                   users = badUsers
+                                 )
         # process move-data
         self.preprocDf.proc_cell_df()
         self.subwayInfoDf = self.preprocDf.computeAverTime(minTimeSegment = self.minTime,
                                                            _output = self.subwayInfoPath,
                                                             push = self.push)
         self.preprocDf.filterLackofData(self.Lcdelta)
+
+        self.preprocDf.exclude_constant_signals()
         # split data by Operators
         self.preprocDf.splitByNetworkAndSave(self.output,mkey = self.mkey)
         # save results
@@ -144,7 +152,8 @@ class Averaging():
                 # loop through laccids
                 laccid_df = seg_df[seg_df['laccid']==laccid]
                 # check if frame contains error-rows(for ex. points which contains lac and cid from the next cell, but MNC from the last cell)
-                errorRows,laccid_df = self.powerAveraging.splitFrameByMinLen(laccid_df,by = 'NetworkType')
+                #errorRows,laccid_df = self.powerAveraging.splitFrameByMinLen(laccid_df,by = 'NetworkType')
+
                 if laccid_df.shape[0]>self.minData:
                     # filter all parts of data with a few datasets.
                     laccid_df_time = self.distToTimeRatio(laccid_df,time_Df)
@@ -152,7 +161,14 @@ class Averaging():
                     # initialization of smoothing algorithm
                     smoothed,fewData = self.powerAveraging.initCombinations(laccid_df_time,combinations='RU')
                     self.aver_df = pd.concat([self.aver_df,smoothed],ignore_index = True)
-                networkErrors = pd.concat([networkErrors,errorRows])
+                    # drop columns from fewdataDf
+                    dropcols = [col for col in list(fewData.columns) if (col not in list(self.aver_df.columns))]
+                    fewData = fewData.drop(dropcols,axis = 1)
+                    fewData['few'] = 1
+                    self.aver_df['few'] = 0
+                    # attach segments with just 1 measurement
+                    # self.aver_df = pd.concat([self.aver_df,fewData],ignore_index = True)
+                #networkErrors = pd.concat([networkErrors,errorRows])
         print networkErrors
     def processTestDf(self,df,subwayInfoDf):
         """
@@ -245,7 +261,8 @@ def main():
     parser.add_argument('-g', '--georef',action = 'store_true',help = 'Post-georeferencing of input data')
     parser.add_argument('-d', '--pushToDb',action = 'store_true',help = 'push result to the database')
     parser.add_argument('-m', '--mkey', type = str,default="",help = "Mark key. For example key for stops-data is 'stop',whereas for"
-                                                        "interchanges-data is 'inter'. That keyword will be passed to the output name")
+                                                                    "interchanges-data is 'inter'. That keyword will be passed to the output name")
+    parser.add_argument('-l', '--lines',type = str,help = 'Path to subway lines geojson')
     parser.add_argument('-s', '--subwayInfoDf', type = str,help = 'DataFrame containing subway information')
     parser.add_argument('-o','--output',type = str,help = 'Path to the DIR to write out processed data')
     parser.add_argument('input',type = str, help = 'Path to the referenced data')
@@ -255,19 +272,21 @@ def main():
           average = args.average,
           georef = args.georef,
           pushToDb = args.pushToDb,
+          lines_path = args.lines,
           subwayInfoDf = args.subwayInfoDf,
           mkey = args.mkey,
           _input = args.input,
           _output = args.output)
 
     test = False
-    dbTest = True
+    dbTest = False
 
     test_segments = ['098-099','099-098','100-099','099-100','100-101','101-100','074-075','075-074','074-073','073-074','151-219','219-151','068-069','069-068','143-144']
     #test_segments = ['151-219','219-151']
     #test_segments = ['099-100']
         ###must get interactively!###
-    Df = pd.io.parsers.read_csv(dbAveraging.input,index_col = 'index')
+    #Df = pd.io.parsers.read_csv(dbAveraging.input,index_col = 'index',low_memory=False)
+    Df = pd.io.parsers.read_csv(dbAveraging.input,low_memory=False)
     # 2. Pre-processing of input referenced dataframe,according to the phone parameters
     if dbAveraging.preproc:
         Df,subwayInfoDf = dbAveraging.preprocData(Df,badUsers = ['sasfeat'])
@@ -284,6 +303,7 @@ def main():
         dbAveraging.iterateBySegment(Df,subwayInfoDf)
         if dbAveraging.georef:
             dbAveraging.postGeoref()
+
         # 4. push smoothed dataframe into the sqlite database
         if dbAveraging.push:
             dbAveraging.pushToDb()
