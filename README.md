@@ -16,12 +16,7 @@ Current dev version is based on using suggestion that there is a way to identify
 
 It contains several steps:
 
-Theoretically there will be the least errors if we use the idea that the train moving equation contains 3 states:
-acceleration 
-
-constant speed 
-
-deceleration
+Theoretically there will be the least errors if we use the idea that the train moving equation contains 3 states:acceleration,constant speed,deceleration
 
 If so, we could figure out the coordinates of each log point.
 
