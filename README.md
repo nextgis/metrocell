@@ -21,5 +21,11 @@ Theoretically there will be the least errors if we use the idea that the train m
 If so, we could figure out the coordinates of each log point.
 
 We could use the combination of moving window and correlation algorithm to shift to bring each signal function to the mean value.
-We could apply ìmeanî and k-means regression methods of filtration to avoid a noise.
+We could apply ‚Äúmean‚Äù and k-means regression methods of filtration to avoid a noise.
 We have also developed the algorithm of position prediction. It based on the comparison between current form of signal and early
+
+
+License
+-------------
+Code is licensed under GNU GPL v2 or any later version
+Data is licensed under ODbL
