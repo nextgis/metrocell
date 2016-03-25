@@ -28,4 +28,5 @@ We have also developed the algorithm of position prediction. It based on the com
 License
 -------------
 Code is licensed under GNU GPL v2 or any later version
+
 Data is licensed under ODbL
