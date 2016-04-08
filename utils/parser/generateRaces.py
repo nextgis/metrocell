@@ -1,17 +1,17 @@
-from utils import Utils
+import utilities
 import pandas as pd
 from numpy import unique,array
 import os
 class GenerateRaces():
-    def __init__(self,interGraphPath,moveGraphPath,moveTypes,moveGraphClosedPath = None):
-        self.moveGraph = self.getGraphs(moveGraphPath)
+    def __init__(self,interchanges_df,graph_df,moveTypes,moveGraphClosedPath = None):
+        self.moveGraph = self.getGraphs(graph_df)
         if moveGraphClosedPath:
             self.moveGraph_closed = self.getGraphs(moveGraphClosedPath)
         else:
             self.moveGraph_closed = None
-        self.interGraph = self.getGraphs(interGraphPath,
-                                         id_from = 'station_from',
-                                         id_to = 'station_to',
+        self.interGraph = self.getGraphs(interchanges_df,
+                                         id_from = 'id_from',
+                                         id_to = 'id_to',
                                          reverse= False)
 
         self.rightSeq = [3,4,1,2]
@@ -31,7 +31,7 @@ class GenerateRaces():
         return idCheck,nextId,nextMark,fullId
     def fullIdCheck(self,fullIdsSeq):
         check = True
-        curSeq = Utils.uniqueUnsorted(fullIdsSeq,True)
+        curSeq = utilities.uniqueUnsorted(fullIdsSeq,True)
         #if len(curSeq) == 4:
         seq = [(curSeq[0:2]),(curSeq[2:4])]
         try:
@@ -45,14 +45,15 @@ class GenerateRaces():
         #else:
         #    print ""
         return check
-    def getGraphs(self,name,
+    def getGraphs(self,df,
                   id_from = 'id_from',
                   id_to = 'id_to',
                   reverse = True):
-        df = pd.io.parsers.read_csv(name,sep = ';')
+        #df = pd.io.parsers.read_csv(name,sep = ';')
         graphs = df[id_from].apply(str) + "-" + df[id_to].apply(str)
         graphs = list(graphs)
         if reverse:
+            # attach reverse direction of graph(e.g. 1->2 and 2->1)
             graphsReverse = df[id_to].apply(str) + "-" + df[id_from].apply(str)
             graphs = graphs + list(graphsReverse)
         return graphs
@@ -68,12 +69,12 @@ class GenerateRaces():
                  indexes : list containing the indexes , has been written into the marks column 'race_id' of main user frame {list}
                  errorsDf: dataFrame containing error sections
         """
-        marksFrame = Utils.insertColumns(marksFrame,self.moveTypes + ['stationId','sequence','race_id'])
+        marksFrame = utilities.insertColumns(marksFrame,self.moveTypes + ['stationId','sequence','race_id'])
         Stations = []
         stations = []
         errors = dict.fromkeys(self.errors,[])
         #if pushErrors:
-        errorsDf = Utils.dfTempate(marksFrame)
+        errorsDf = utilities.dfTempate(marksFrame)
         firstIter = False
         if len(indexes) ==0:
             firstIter = True
@@ -156,7 +157,7 @@ class GenerateRaces():
             #  st1[2] -- ... removed slice...  -- st3[3]
             marks,moveErrorsDf,interErrorsDf = self.compareWithDict(marks,Stations)
             marks,errorsDf = self.concatErrorsDropRows(marks,errorsDf,moveErrorsDf,interErrorsDf)
-        marks = Utils.dropMultipleCols(marks,['stationId','sequence'])
+        marks = utilities.dropMultipleCols(marks,['stationId','sequence'])
         return marks,indexes,errorsDf
     def excludeFalseVals(self,y,x):
         y_excluded_x = [y[i] for i in range(0,len(y)) if y[i] not in x]
@@ -170,7 +171,7 @@ class GenerateRaces():
         if not errorsDf.empty:
             errorsDf = errorsDf.drop_duplicates()
             errorsDf = errorsDf.loc[:,self.errorsDfCols]
-            errorsDf = Utils.floatToInt(errorsDf,['ID','inter','move','sequence','stationId','errorIndex'])
+            errorsDf = utilities.floatToInt(errorsDf,['ID','inter','move','sequence','stationId','errorIndex'])
         return marks,errorsDf
     def concatErrorSlice(self,marksFrame,errorsFrame,ix_from,ix_to,errorField):
          marksFrame.loc[ix_from:ix_to,errorField] = -1
@@ -187,10 +188,10 @@ class GenerateRaces():
                 errorsDf: dataFrame containing error sections
         """
         marksDf = marks.copy()
-        moveErrorsDf = Utils.dfTempate(marksDf,columns = ['errorIndex'])
-        interErrorsDf = Utils.dfTempate(marksDf,columns = ['errorIndex'])
+        moveErrorsDf = utilities.dfTempate(marksDf,columns = ['errorIndex'])
+        interErrorsDf = utilities.dfTempate(marksDf,columns = ['errorIndex'])
         # check errors of move-part
-        lOfUniqueIds = [(listOfIds[i][0],Utils.uniqueUnsorted(listOfIds[i][1],returnNA = True)) for i in range(0,len(listOfIds))]
+        lOfUniqueIds = [(listOfIds[i][0],utilities.uniqueUnsorted(listOfIds[i][1],returnNA = True)) for i in range(0,len(listOfIds))]
         moveErrorsIxs = [(lOfUniqueIds[i][0]) for i in range(0,len(lOfUniqueIds)) if
                          not self.compareWithGraph(lOfUniqueIds[i][1],self.moveGraph,closedGraph= self.moveGraph_closed)]
         # write them into the errors-dataFrame
@@ -220,7 +221,7 @@ class GenerateRaces():
         :return:
         """
         #if not 'errorIndex' in frame.columns.values:
-        #    frame = Utils.insertColumns(frame,['errorIndex'])
+        #    frame = utilities.insertColumns(frame,['errorIndex'])
         for error in dict.keys():
             frame[error] = dict[error]
             frame.loc[:,'errorIndex'] = self.generateId()
@@ -254,7 +255,7 @@ class GenerateRaces():
         fullCheck = True
         seq = [None] + _seq
         curSeq = [seq[i] for i in range(1,len(seq)) if seq[i]!=seq[i-1]]
-        #curSeq = Utils.uniqueUnsorted(seq,True)
+        #curSeq = utilities.uniqueUnsorted(seq,True)
 
         if not curSeq == self.rightSeq:
             errors['sequence'] = range(firstIx,lastIx)
@@ -287,7 +288,7 @@ class GenerateRaces():
         """
         if not kwargs:
 
-            id = Utils.generateRandomId()
+            id = utilities.generateRandomId()
         else:
             id = kwargs['ix']
         return id

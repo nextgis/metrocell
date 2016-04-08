@@ -10,7 +10,7 @@ class BringingToSingleTime():
         write session_id into the marks- and log- files and rewrite them.
         :param row: row from the dataFrame, containing paths to all of the marks {pd.DataFrame}
         :param sessionId: identifier of current session {int}
-        :param devices: what type of devices folder is contains {list}
+        :param devices: what types of devices exist in folder{list}
         :param kwargs:
         :return:
         """
@@ -46,7 +46,7 @@ class BringingToSingleTime():
         otherUsers = usersFrame[usersFrame['mainUser'] == 0].index
         sessionId = mainCellMarkFile.session_id.unique()[0]
         for user in otherUsers:
-            userRow = usersFrame[usersFrame.index == user].irow(0)
+            userRow = usersFrame[usersFrame.index == user].iloc[0]
             # what type of devices the user has been grabbed
             devices = DirProcesser.ifExists(userRow)
             usersFrame.loc[user,'devices'] = str(devices)

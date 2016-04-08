@@ -1,41 +1,46 @@
 __author__ = 'Alex'
 import os,sys
-from argparse import ArgumentParser
 from dirProcesser import DirProcesser
 import pandas as pd
 import numpy as np
 from generateRaces import GenerateRaces
 from bringing_to_single_time import BringingToSingleTime
-from utils import Utils
+import utilities
+from shutil import rmtree
+import variables
+import subprocess
 
 class PrepareAndSplit():
-    def __init__(self,bring,
-                 inputRawDir,
-                 outputProcDir,
-                 interchangesPath,
-                 moveGraphPath,
-                 moveGraphClosedPath,
-                 mainUser = None
+    def __init__(self,
+                 server_conn,
+                 city,
+                 interchanges_df,
+                 graph_df,
+                 raw_df,
+                 plot=True
+                 # moveGraphClosedPath,
+                 # mainUser = None
                  ):
-        #self.availableDevices = ['cell','sensor','external']
-        self.availableDevices = ['cell','sensor']
-        self.moveTypes = ['move','stop','inter']
-
-        self.inputRawDir = inputRawDir
-
-
-        self.bring = bring
-        self.generator = GenerateRaces(interchangesPath,moveGraphPath,self.moveTypes,moveGraphClosedPath)
+        self.server_conn = server_conn
+        self.city = city
+        self.interchanges_df = interchanges_df
+        self.graph_df = graph_df
+        self.raw_df = raw_df
+        self.plot = plot
+        self.moveTypes = variables.moveTypes
+        self.device_id = None
+        # self.generator = GenerateRaces(interchangesPath,moveGraphPath,self.moveTypes,moveGraphClosedPath)
+        self.generator = GenerateRaces(self.interchanges_df,self.graph_df,self.moveTypes)
         # use mainUser variable to initialize folder which contains the marks
-        self.dirProcesser = DirProcesser(mainUser=mainUser,moveTypes=self.moveTypes)
+        self.dirProcesser = DirProcesser()
         #self.toParse = toParse
-        self.outputProcDir= outputProcDir
-        self.errorsDir = self.outputProcDir + "\\" + 'errors'
-        if self.bring:
-            self.bringing = BringingToSingleTime()
+        #self.outputProcDir= outputProcDir
+        self.bringing = BringingToSingleTime()
+
+        # intialize temp directory if it doesn't exist
         self.initOutFlds()
         # let's go!
-        self.loopRaws()
+
 
         return
 
@@ -68,10 +73,10 @@ class PrepareAndSplit():
         :return:
         """
         logFrame = pd.io.parsers.read_csv(logPath,sep = ";")
-        logFrame = Utils.insertColumns(logFrame,columns = self.moveTypes + ['race_id'] )
+        logFrame = utilities.insertColumns(logFrame, columns =self.moveTypes + ['race_id'])
         fullFrame = pd.concat([logFrame,marksFrameIx])
         # fullFrame.ID = fullFrame.ID.astype('int64')
-        fullFrame = fullFrame.sort(['TimeStamp','inter','stop'])
+        fullFrame = fullFrame.sort_values(by = ['TimeStamp','inter','stop'])
         fullFrame = fullFrame.set_index([range(0,len(fullFrame))])
         s = pd.Series(list(fullFrame['ID']))
         firstIx = s.first_valid_index()
@@ -80,15 +85,15 @@ class PrepareAndSplit():
         return fullFrame
     def initOutFlds(self):
         """
-        make folders output folders
+        make output folders
         :return:
         """
         # create output folder devided by device
-        f = lambda fld: os.mkdir(self.outputProcDir + "\\" + fld)
+        f = lambda fld: os.mkdir(fld)
         # check if folder already exist
-        e = lambda fld: os.path.isdir(self.outputProcDir + "\\" + fld)
+        e = lambda fld: os.path.isdir(fld)
         # create folders if need
-        flds = self.availableDevices + ['errors']
+        flds = [variables.TEMP_FLD]
         [f(d) for d in flds if e(d) == False]
     def breakOnSections(self,fullFrame,device):
         """
@@ -100,8 +105,8 @@ class PrepareAndSplit():
         marksInLog = fullFrame[~fullFrame['race_id'].isnull()]
         marksIxs = marksInLog.groupby('race_id').apply(lambda x : list(x.index))
         for i in range(1,marksIxs.shape[0]):
-            prev = marksIxs.irow(i-1)
-            next = marksIxs.irow(i)
+            prev = marksIxs.iloc[i-1]
+            next = marksIxs.iloc[i]
             fullFrame.loc[prev[0]:prev[-1],'move'] = 2
             fullFrame.loc[prev[0]:next[0],'race_id'] = marksIxs.index[i-1]
             sectionFrame = fullFrame.loc[prev[0]:next[0],:].copy()
@@ -140,7 +145,17 @@ class PrepareAndSplit():
             typeDf = sectionFrameUpdated[sectionFrameUpdated[moveType] == 2]
             if not typeDf.empty:
                 Ids = self.stationsId(typeDf)
-                self.dirProcesser.put_in_tidy(typeDf,device,Ids,moveType,self.outputProcDir)
+                _sectionFrameUpdated = utilities.dropMultipleCols(sectionFrame, self.moveTypes+['Name'])
+                _sectionFrameUpdated.rename(columns = {'ID':'station_id'},inplace=True)
+                _sectionFrameUpdated['move_type'] = moveType
+                _sectionFrameUpdated['id_from'] = Ids['from']
+                _sectionFrameUpdated['id_to'] = Ids['to']
+                _sectionFrameUpdated = utilities.dropMultipleCols(_sectionFrameUpdated,variables.excluded_meta_cols + ['session_id'])
+                _sectionFrameUpdated['city'] = self.city
+                #_sectionFrameUpdated = utilities.floatToInt(_sectionFrameUpdated, ['race_id'])
+                utilities.insert_pd_to_postgres(_sectionFrameUpdated,self.server_conn,self.server_conn['tables']['parsed_'+device])
+
+                #self.dirProcesser.put_in_tidy(typeDf,device,Ids,moveType)
 
     def isempty(self,frame,col):
         """
@@ -181,99 +196,129 @@ class PrepareAndSplit():
         :param pushErrors: True if need to write the errors into the dictionary {Boolean}
         :return:
         """
-        errors = {}
         # check what type of devices(cell,sensor,external) has been grabbed
         userSession = DirProcesser.lastFld(row['cellLog'],pos = -2)
-
+        errorsDf = pd.DataFrame()
         for device in devices:
             sys.stdout.write("\t"+ userSession + " : " + device)
             sys.stdout.flush()
 
             logPath = row[device + "Log"]
             marksPath = row[device + "Marks"]
+            # write race_id and session_id at the mark files
             marksFrameIx,indexes,errorsDf = self.updateMarks(marksPath,indexes,pushErrors)
             sortedFullFrame = self.concatAndCut(logPath,marksFrameIx)
+            sortedFullFrame['zip_id'] = row['zip_id']
             self.breakOnSections(sortedFullFrame,device)
             if pushErrors:
                 if not errorsDf.empty:
-                    errorsName = userSession + ".csv"
-                    errors.update({errorsName:errorsDf})
+                    errorsDf['zip_id'] = row['zip_id']
+                    errorsDf = utilities.dropMultipleCols(errorsDf,['ID'])
                 #pushErrors = False
 
-        return indexes,errors
+        return indexes,errorsDf
 
     def loopRaws(self):
         """
         loop through the raw zip files.
         :return:
         """
-        step = 0
-        files = os.listdir(self.inputRawDir)
-        length = len(files)
-        for f in files:
-            step+=1
-            unpacked = []
-            sys.stdout.write("\r" + str(step) + "/" + str(length) + " : ")
-            sys.stdout.flush()
-            sessionFolder = self.inputRawDir + "\\" + f
+        print 'Parser starts'
+        print 30*'-'
+        #step = 0
+        #length = len(self.raw_df)
 
-            # check if number of phones > 1(if user was grabbing logs from more then 1 phone)
-            if self.bring:
-                sessionUsersData = {}
-                usersSessions = os.listdir(sessionFolder)
-                sessionId = Utils.generateRandomId()
-                # loop through users
-                for userSessionName in usersSessions:
-                    userSessionName = self.dirProcesser.unzipUserSession(sessionFolder,userSessionName)
-                    unpacked.append(userSessionName)
-                    sessionUserData = self.dirProcesser.getSessionData(userSessionName)
-                    sessionUsersData.update(sessionUserData)
-                usersFrame = pd.DataFrame(sessionUsersData).transpose()
-                userRow = usersFrame[usersFrame['mainUser'] == 1].irow(0)
-                devices = DirProcesser.ifExists(userRow)
-                self.bringing.writeSessionSaveFrames(userRow,sessionId,devices)
-            else:
-                sessionName = self.dirProcesser.unzipUserSession(self.inputRawDir,f)
-                unpacked.append(sessionName)
-                sessionData = self.dirProcesser.getSessionData(sessionName)
-                userRow = pd.DataFrame(sessionData).transpose().irow(0)
-                devices = DirProcesser.ifExists(userRow)
-            # only after this step we can start copy marks
-            mainIds,errors = self.loopMarks(userRow,devices,pushErrors= True)
+        row = self.raw_df.iloc[0]
+        zip_id = self.raw_df.first_valid_index()
+        zip_ids = list(self.raw_df.index)
 
-            if self.bring:
-                # usersFrame contains only the paths. let's start to copy the marks from main User folder.
-                usersFrameApdated = self.bringing.processFrames(usersFrame,userRow)
-                # split other users on sections
-                otherUsersFrame = usersFrameApdated[usersFrameApdated['mainUser']==0]
 
-                for index,row in otherUsersFrame.iterrows():
-                    devices = eval(row['devices'])
-                    self.loopMarks(row,devices,mainIds)
-            # save errors in the markFiles
-            self.dirProcesser.pushErrors(errors,self.errorsDir)
-            # remove unzipped folders
-            self.dirProcesser.removeFlds(unpacked)
+        #step+=1
+        #sys.stdout.write("\r" + str(step) + "/" + str(length) + " : ")
+        #sys.stdout.flush()
+        # check if number of phones > 1(if user was grabbing the logs from more then 1 phone)
+        if row['session_id']:
+            session_rows = self.raw_df[self.raw_df['session_id'] == row['session_id']]
+            # loop throuth the users
+            sessionData = {}
+            for zip_id,session_row in session_rows.iterrows():
+                session_path = variables.INBOX + '/' + self.city + '/sessions/' + session_row['zip_basename']
+                user_session_name = os.path.splitext(os.path.basename(session_path))[0]
+                extracted_logs_path = variables.TEMP_FLD + '/' + os.path.basename(user_session_name)
+                self.dirProcesser.unzipUserSession(session_path,extracted_logs_path)
+                sessionUserData = self.dirProcesser.getSessionData(extracted_logs_path,zip_id)
+                sessionUserData['zip_id'] = zip_id
+                self.device_info_df = utilities.get_pd_df_from_sql(self.server_conn,self.server_conn['tables']['device_info'])
+                if not session_row['device_id']:
+                    self.extract_phone_info(extracted_logs_path)
+                    utilities.update_postgre_rows(self.server_conn,self.server_conn['tables']['input_data'],zip_id,'device_id',self.device_id,index_col='zip_id')
+                    self.device_id = None
+                sessionData.update(sessionUserData)
+            usersFrame = pd.DataFrame(sessionData).transpose()
+            userRow = usersFrame[usersFrame['mainUser'] == 1].iloc[0]
+            devices = DirProcesser.ifExists(userRow)
+            self.bringing.writeSessionSaveFrames(userRow,row['session_id'],devices)
+        else:
+            session_path = variables.INBOX + '/' + self.city + '/' + row['zip_basename']
+            session_name =  os.path.splitext(session_path)[0]
+            extracted_logs_path = variables.TEMP_FLD + '/' + os.path.basename(session_name)
+            self.dirProcesser.unzipUserSession(session_path,extracted_logs_path)
+            self.device_info_df = utilities.get_pd_df_from_sql(self.server_conn,self.server_conn['tables']['device_info'])
+            if (not row['device_id']) or (row['device_id']!=row['device_id']):
+                self.extract_phone_info(extracted_logs_path)
+                utilities.update_postgre_rows(self.server_conn,self.server_conn['tables']['input_data'],zip_id,'device_id',self.device_id,index_col='zip_id')
+                self.device_id = None
+            sessionData = self.dirProcesser.getSessionData(extracted_logs_path,zip_id)
+            userRow = pd.DataFrame(sessionData).transpose().iloc[0]
+            devices = DirProcesser.ifExists(userRow)
 
-def main():
+        # only after this step we can start copy marks
+        # firstly process the main user (if there are several users at the session)
+        mainIds,errors_df = self.loopMarks(userRow,devices,pushErrors= True)
+        if row['session_id']:
+            # usersFrame contains only the paths. let's start to copy the marks from main User folder.
+            usersFrameUpdated = self.bringing.processFrames(usersFrame,userRow)
+            # split other users on sections
+            otherUsersFrame = usersFrameUpdated[usersFrameUpdated['mainUser']==0]
+            for index,row in otherUsersFrame.iterrows():
+                devices = eval(row['devices'])
+                self.loopMarks(row,devices,mainIds)
+        # save errors in the markFiles
+        print ' '
+        if not errors_df.empty:
+            utilities.insert_pd_to_postgres(errors_df,self.server_conn,self.server_conn['tables']['grab_errors'])
+        for z_id in zip_ids:
+            utilities.update_postgre_rows(self.server_conn,self.server_conn['tables']['processing_status'],z_id,'parsed',True,index_col = 'zip_id')
+        [rmtree(variables.TEMP_FLD + '/' + fld) for fld in os.listdir(variables.TEMP_FLD) if os.path.isdir(variables.TEMP_FLD + '/' + fld)]
+        [os.remove(variables.TEMP_FLD + '/' + file) for file in os.listdir(variables.TEMP_FLD) if os.path.isfile(variables.TEMP_FLD + '/' + file)]
 
-    parser = ArgumentParser(description='')
-    parser.add_argument('-i', '--interchangesPath',type = str,required = True,help = 'Path to interchanges dataFrame')
-    parser.add_argument('-m', '--moveGraphPath',type = str,required = True,help = 'Path to moves graph dataFrame')
-    parser.add_argument('-mC','--moveGraphClosedPath',type = str,required = False,help = 'Path to graph with closed stations')
-    parser.add_argument('-u', '--mainUser', type = str, help = 'The user whose logs contain markFiles')
-    parser.add_argument('-b', '--bring',action = 'store_true',help = 'bring to single time or not')
-    parser.add_argument('inputRawDir', help = 'input directory containing zip-files of sessions or session-folders ')
-    parser.add_argument('outputProcDir',type = str, help = "The output directory to save adapted zip-files.")
-    args = parser.parse_args()
-    return args
-if __name__ =='__main__':
-    args = main()
-    PrepareAndSplit(inputRawDir = args.inputRawDir,
-                    bring = args.bring,
-                    mainUser = args.mainUser,
-                    outputProcDir = args.outputProcDir,
-                    interchangesPath = args.interchangesPath,
-                    moveGraphPath = args.moveGraphPath,
-                    moveGraphClosedPath = args.moveGraphClosedPath
-                    )
+    def extract_phone_info(self,session_path):
+        device_path = session_path + '/' + variables.device_info
+        if os.path.exists(device_path):
+            fr = pd.io.parsers.read_table(device_path,header = None)
+            fr[0] = fr[0].apply(lambda x: x[:-1])
+            fr = fr.set_index(0)
+            fr = fr.transpose()
+            fr.rename(columns = {
+                       'Kernel version':'Kernel_version',
+                       'Radio firmware':'Radio_firmware',
+                       'Logger version name':'Logger_version_name',
+                       'Logger version code':'Logger_version_code',
+                       },inplace = True)
+            #fr['zip_id'] = zip_id
+            device_id = None
+            for id,device in self.device_info_df.iterrows():
+                try:
+                    if all(device == fr.iloc[0]):
+                        self.device_id = device_id = id
+                        print "device = ",device['Brand'],"with id = " ,self.device_id ," is already exist at the database"
+                        break
+                except:
+                    pass
+            if not device_id:
+                self.device_id = utilities.insert_pd_to_postgres(fr, self.server_conn,self.server_conn['tables']['device_info'],return_last_id=True)
+
+        else:
+            print 'oops!> device file does not exist!',device_path
+
+

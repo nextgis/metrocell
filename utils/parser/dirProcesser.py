@@ -1,25 +1,11 @@
 __author__ = 'Alex'
 import zipfile,shutil,string,os
-from utils import Utils
+import utilities
+import variables
 class DirProcesser():
-    def __init__(self,
-                 moveTypes,
-                 mainUser='',
-                 sensorMarksName = "sensor_time_marks.csv",
-                 cellMarksName = "cell_time_marks.csv",
-                 externalMarksName = "external_time_marks.csv",
-                 sensorLogName = "sensor_time_log.csv",
-                 cellLogName = "cell_time_log.csv",
-                 externalLogName = "external_time_log.csv"):
-        self.sensorMarksName = sensorMarksName
-        self.cellMarksName = cellMarksName
-        self.externalMarksName = externalMarksName
-        self.sensorLogName = sensorLogName
-        self.cellLogName = cellLogName
-        self.externalLogName = externalLogName
-        self.cellLogName = cellLogName
-        self.mainUser = mainUser
-        self.moveTypes = moveTypes
+    def __init__(self):
+        self.moveTypes = variables.moveTypes
+        self.mainUser = None
     def put_in_tidy(self,sectionFrame,device,stationsId,moveType,outputDir):
         """
         Push processed sectionFrame into the output directory
@@ -30,38 +16,40 @@ class DirProcesser():
         :param outputDir: path to the output directory {str}
         :return:
         """
-        localTime = Utils.getLocalTime(sectionFrame)
+        localTime = utilities.getLocalTime(sectionFrame)
         username = sectionFrame.User.unique()[0]
         fileName=stationsId['from'].zfill(3) + "-" + \
                  stationsId['to'].zfill(3)   + "-" + \
                  localTime                   + "-" + \
                  username                    + "-" + \
                  moveType + ".csv"
-        path = outputDir + "\\" + device + "\\" + fileName
-        sectionFrameAdapted = Utils.dropMultipleCols(sectionFrame,self.moveTypes)
+        path = outputDir + "/" + device + "/" + fileName
+        sectionFrameAdapted = utilities.dropMultipleCols(sectionFrame, self.moveTypes)
         #sectionFrameAdapted.loc[:,'race_id'] = sectionFrameAdapted.loc[:,'race_id'].astype('int64')
-        sectionFrameAdapted = Utils.checkId(sectionFrameAdapted)
-        sectionFrameAdapted = Utils.floatToInt(sectionFrameAdapted,['race_id','ID'])
+        sectionFrameAdapted = utilities.checkId(sectionFrameAdapted)
+        sectionFrameAdapted = utilities.floatToInt(sectionFrameAdapted, ['race_id', 'ID'])
         sectionFrameAdapted.to_csv(path,index=False,encoding='utf-8')
-    def getSessionData(self,userSessionFldPath):
+    def getSessionData(self,user_session_fld_path,zip_id):
         """
         Write data of all possible file paths  to the table
         :param userSessionFldPath: path to the folder containing the sessions {str}
         :return: the data about users file paths {pd.DataFrame}
         """
+        mainUser = 0
         usersData = {}
-        userName = string.split(userSessionFldPath, "--")[-1]
-        if userName == self.mainUser:
-            mainUser = 1
-        else:
-            mainUser = 0
-        sensorMarks =       userSessionFldPath + "\\" + self.sensorMarksName
-        cellMarks =         userSessionFldPath + "\\" + self.cellMarksName
-        externalMarks =     userSessionFldPath + "\\" + self.externalMarksName
-        sensorLog =         userSessionFldPath + "\\" + self.sensorLogName
-        cellLog =           userSessionFldPath + "\\" + self.cellLogName
-        externalLog =       userSessionFldPath + "\\" + self.externalLogName
+        userName = os.path.basename(user_session_fld_path).split("--")[-1]
+
+        sensorMarks =      user_session_fld_path + "/" + variables.sensorMarksName
+        cellMarks =        user_session_fld_path + "/" + variables.cellMarksName
+        externalMarks =    user_session_fld_path + "/" + variables.externalMarksName
+        sensorLog =        user_session_fld_path + "/" + variables.sensorLogName
+        cellLog =          user_session_fld_path + "/" + variables.cellLogName
+        externalLog =      user_session_fld_path + "/" + variables.externalLogName
+        for mark in [sensorMarks,externalMarks,cellMarks]:
+            if os.path.exists(mark):
+                mainUser = 1
         usersData.update({userName:{
+                        "zip_id"          : zip_id,
                         "mainUser"        : mainUser,
                         "sensorMarks"     : sensorMarks,
                         "cellMarks"       : cellMarks,
@@ -77,14 +65,14 @@ class DirProcesser():
             shutil.rmtree(lDir)
     def pushErrors(self,errorsDict,dir):
         for localPath in errorsDict.keys():
-            errorsDict[localPath].to_csv(dir + "\\" +  localPath,sep = ';',index = False)
+            errorsDict[localPath].to_csv(dir + "/" +  localPath,sep = ';',index = False)
     @staticmethod
     def lastFld(path,pos):
-        return string.split(path,"\\")[pos]
+        return string.split(path,"/")[pos]
     @staticmethod
     def ifExists(row):
         """
-        Check what files does the phone grabbed.
+        Check what files the phone has grabbed.
         :param row: paths of user's session in theory
         :return: only really existed file paths
         """
@@ -94,28 +82,23 @@ class DirProcesser():
             fname = code + "Log"
             path = row[fname]
             exists = os.path.isfile(path)
-            if exists == True:
+            if exists:
                 truthPaths.append(code)
         return truthPaths
 
     @staticmethod
-    def unzipUserSession(pathToSession,userZip):
+    def unzipUserSession(zip_path,out_path):
         """
         Unzipping files
         :param pathToSession: path to session {str}
         :param userZip: user's raw zip-file  {str}
         :return: name of the extracted folder {str}
         """
-
-        userSessionFolder =   pathToSession + "\\" + userZip
-
-        outSessionFld =  pathToSession + "\\" + string.split(userZip,".")[0]
-        zip_ref = zipfile.ZipFile(userSessionFolder,'r')
-        zip_ref.extractall(outSessionFld)
+        zip_ref = zipfile.ZipFile(zip_path,'r')
+        zip_ref.extractall(out_path)
         zip_ref.close()
 
-        newSessionName = string.split(userSessionFolder,".")[0]
-        return newSessionName
+        return
     @staticmethod
     def grabAndDrop(fld,fldDst,zipDst):
         """
@@ -124,13 +107,13 @@ class DirProcesser():
         :return:
         """
         files = os.listdir(fld)
-        userFld = string.split(fld,"\\")[-1]
-        outPath = zipDst + "\\" + userFld + ".zip"
+        userFld = string.split(fld,"/")[-1]
+        outPath = zipDst + "/" + userFld + ".zip"
         zf = zipfile.ZipFile(outPath,"w")
         for file in files:
-            fullname = fld + "\\" + file
+            fullname = fld + "/" + file
             zf.write(fullname)
         zf.close()
         if fldDst:
-            dst = fldDst + "\\" + userFld
+            dst = fldDst + "/" + userFld
             shutil.move(src = fld, dst = dst)
