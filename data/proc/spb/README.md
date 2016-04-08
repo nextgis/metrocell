@@ -1,1 +1,0 @@
-Storage for segmented data, Saint-Petersburg
