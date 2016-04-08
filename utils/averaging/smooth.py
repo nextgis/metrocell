@@ -4,7 +4,7 @@ __author__ = 'Alex'
 from scipy.stats import signaltonoise
 from filters import Filters
 import pandas as pd
-from utils import Utils
+import utilities,variables
 
 class Smooth():
     def __init__(self):
@@ -12,18 +12,22 @@ class Smooth():
         self.correlator = None
         self.filters = None
         self.segmentTime = None
-        self.predictionMethod = 'byCorr'
-        self.reducingType = 'localMaxima'
+        self.predictionMethod = variables.averaged_cell_pars['predictionMethod']
+        self.reducingType = variables.averaged_cell_pars['reducingType']
+        self.MNC = None
+        self.num_races = 1
+        self.num_users = 1
+
         #Parameters to check if data corresponds to correlation computation algorithm
         # minimum length of signal
-        self.frameLength = 5
-        self.maxLag = 7.5
+        self.frameLength = variables.averaged_cell_pars['frameLength']
+        self.maxLag = variables.averaged_cell_pars['maxLag']
         self.interpStep = None
         # ratio difference between 2 signals of one cell grabbed by two different users.
 
         self.journal = {'User':pd.DataFrame(),'race_id':pd.DataFrame()}
 
-        self.ut = Utils()
+
         return
 
 
@@ -34,16 +38,23 @@ class Smooth():
         :param combinations: sequence of litters,to identify an order of moving. 'R' - by race; 'U' - by user. {'RU','UR'}
         :return: smoothed dataframe or input dataframe if
         """
+
         self.filters.interpStep = self.interpStep
         by1,checkField1 = self.combinations[combinations[0]]
         by2,checkField2 = self.combinations[combinations[1]]
 
         self.defaultDiff = self.interpStep * self.maxLag
+
+
+
         df = self.smoothByAlg(df,'median',by = 'race_id')
-        df = self.computeDataByRaces(df)
+        df = self.computeDataByRaces(df,store_vals= True)
+
         translated,fewDataDf = self.initMoving(df,by = [by1],checkField=checkField1)
-        if not translated.empty:
+        if (not translated.empty) and (self.num_races != 1):
             translated = self.computeDataByRaces(translated)
+            #translated['NumUsers'] = self.num_users
+            #translated['NumRaces'] = self.num_races
             df = self.smoothByAlg(translated,'kmeans',missedFields= ['NumRaces',by1], by = by1,checkFields = [checkField1])
             #if combinations == 'UR':
                 #df = self.interpolatePowers(df)
@@ -53,13 +64,15 @@ class Smooth():
             df = self.translateByShifts(translated,transFrame,excludeDf = fewDataDf2)
             #self.filters.endIndexes,self.filters.levelsNum = self.getBoundaries(df,end = True)
             Ideal = self.smoothByAlg(df,'kmeans',missedFields= ['NumRaces'],by = '',checkFields = [checkField1,checkField2],end = True) #,checkFields = [checkField2]
+
             #IdealFiltered = self.filters.rollingMean(Ideal,'Power',by = '',window = 30)
             return Ideal,fewDataDf
         else:
-            return translated,fewDataDf
+            Ideal = self.smoothByAlg(df,'kmeans',missedFields= ['NumRaces'],by = '',checkFields = [checkField1,checkField2],end = True,check_data = False) #,checkFields = [checkField2]
+            return Ideal,fewDataDf
             # for loop through the other data by User and say that each user's group is origin data
 
-    def smoothByAlg(self,df,filt,missedFields = None,by = '',checkFields = 'default',end = False):
+    def smoothByAlg(self,df,filt,missedFields = None,by = '',checkFields = 'default',end = False,check_data = True):
         """
         group by column if need, initialize smoothing algorithm and concatenate the result
         :param df: {pd.DataFrame}
@@ -74,9 +87,9 @@ class Smooth():
         if by:
             byField = df.groupby(by)
             for index,gr in byField:
-                PredictedDf = self.filters.prepareAndPredict(gr,filt,PredictedDf,missedFields = missedFields,checkFields = checkFields,end = end)
+                PredictedDf = self.filters.prepareAndPredict(gr,filt,PredictedDf,missedFields = missedFields,checkFields = checkFields,end = end,check_data = check_data)
         else:
-            PredictedDf = self.filters.prepareAndPredict(df,filt,PredictedDf,missedFields = missedFields,checkFields = checkFields,end = end)
+            PredictedDf = self.filters.prepareAndPredict(df,filt,PredictedDf,missedFields = missedFields,checkFields = checkFields,end = end,check_data = check_data)
         return PredictedDf
 
     def initMoving(self,df,checkField,by = None,return_trans = False):
@@ -100,7 +113,8 @@ class Smooth():
                 UpdatedDf, TransFrame,fewDataDf = self.move(group,TransFrame,UpdatedDf,fewDataDf,checkField = checkField,index = index)
         else:
             UpdatedDf, TransFrame,fewDataDf = self.move(df,TransFrame,UpdatedDf,fewDataDf,checkField = checkField)
-        print TransFrame
+        if not TransFrame.empty:
+            print TransFrame
         if not return_trans:
             return UpdatedDf,fewDataDf
         else:
@@ -336,19 +350,23 @@ class Smooth():
             raise ValueError("Can't compute signal to noise value")
         print mainUser,mainSTN
         return mainUser
-    def computeDataByRaces(self,df):
+    def computeDataByRaces(self,df,store_vals = False):
         """
         compute the number of races and users per each race
         """
         df_updated = pd.DataFrame()
         _df = df.copy()
-        _df.loc[:,'NumRaces'] =len(_df.race_id.unique())
+        _df.loc[:,'NumRaces']  = num_races = len(_df.race_id.unique())
         _grouped = _df.groupby('race_id')
         for race_id,gr in _grouped:
             gr.is_copy = False
-            gr.loc[:,'NumUsers'] = len(gr.User.unique())
+            gr.loc[:,'NumUsers'] = num_users = len(gr.User.unique())
             df_updated = pd.concat([df_updated,gr])
+        if store_vals:
+            self.num_races = num_races
+            self.num_users = num_users
         return df_updated
+
     def translateByShifts(self,df,transFrame,by = 'race_id', excludeDf = pd.DataFrame()):
         """
         translate dataframe by shifts
@@ -372,3 +390,4 @@ class Smooth():
             return UpdatedDf
         else:
             return df
+

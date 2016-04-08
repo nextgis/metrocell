@@ -1,175 +1,199 @@
 __author__ = 'Alex'
 
-
+import variables
 import pandas as pd
 import numpy as np
-import sys
-from utils import Utils
-from geoFilesConn import GeoFilesConn
-from pointInterpolator import PointInterpolator
+import utilities
 from preproc import Preproc
 from smooth import Smooth
-from dbase import Dbase
-from argparse import ArgumentParser
+from scipy import interpolate
+import sys
+import psycopg2
+
 from posAlgorithm import SignalCorrelator
 from filters import Filters
 class Averaging():
-    def __init__(self,preproc,average,georef,pushToDb,subwayInfoDf,mkey,lines_path,_input,_output):
-        self.preproc = preproc
-        if not self.preproc:
-            self.subwayInfoDf = subwayInfoDf
-        self.average = average
-        self.georef = georef
-        self.push = pushToDb
-        self.mkey = mkey
-        self.tabname = 'cell'
-        self.segments_geojson_path = lines_path
-        self.input = _input
-        self.output = _output
-        if self.output:
-            self.preLogPointsPath = self.output + "\\pre_log_points.csv"
-            #self.saveCellSmoothed = self.output + "\\Cells_smoothed_ref-200-Full_with_1Meas.csv"
-            self.saveCellSmoothed = self.output + "\\Cells_smoothed_ref-200-MegaFon-2G.csv"
-            self.testDfPath = self.output + "\\testSets.csv"
-            self.jpath = self.output + "\\journals\\"
-            self.segInfoPath = self.output + "\\segmentsStepsDf.csv"
-            self.activeBagPath = self.output + "\\activeBag.csv"
-        if self.push:
-            self.db_output = self.output + "\\Cells_smoothed_ref-200"
-            self.subwayInfoPath = self.output + "\\subwayInfo.csv"
+    def __init__(self,server_conn,averaged_tabname,zip_ids,city
+                  ):
+        self.server_conn = server_conn
+        self.zip_ids = zip_ids
+        self.city = city
+        self.averaged_table_name =  self.server_conn['tables']['averaged_'+averaged_tabname+'_meta']
+        self.connString = "host = %s user = %s password = %s dbname = %s port = %s" %\
+                         (self.server_conn['host'],self.server_conn['user'],self.server_conn['password'],self.server_conn['dbname'],self.server_conn['postgres_port'])
+        self.segments = {}
+        self.move_df = utilities.merge_parsed_georeferenced_df(self.server_conn,'parsed_'+averaged_tabname)
+        # extract the only rows which represent input zip ids
+        self.move_df = self.move_df[self.move_df['zip_id'].isin(self.zip_ids)]
 
+        self.subway_info_df = utilities.get_pd_df_from_sql(self.server_conn,self.server_conn['tables']['subway_info'])
+
+
+        self.averaged_geo = utilities.get_pd_df_from_sql(self.server_conn,self.server_conn['tables']['averaged_geo'],index_col=['city','ratio','segment_id'])
+        # make averaged point geometries for all segments
+        if self.averaged_geo.empty:
+            utilities.interpolate_averaged_points(self.server_conn,
+                                                  self.server_conn['tables']['lines'],
+                                                  self.server_conn['tables']['averaged_geo'],
+                                                  step = variables.averaged_cell_pars['interp_step_meters']
+                                                  )
+            self.averaged_geo = utilities.get_pd_df_from_sql(self.server_conn,self.server_conn['tables']['averaged_geo'],index_col=['city','ratio','segment_id'])
+        #instances
         self.filters = Filters()
         # save after filtration
         #self.filters.unique_names = ['segment','NetworkType','NetworkGen','LAC','CID','laccid','segment_start_id','segment_end_id']
-        self.filters.unique_names = ['segment','NetworkGen','LAC','CID','laccid','segment_start_id','segment_end_id']
-        # the number of neighbours (for kNeighbours method of averaging)
-        self.filters.nNeighbours = 50
-        # the minimum number of rows for collected LACCID as input parameter (for kNeighbours method of averaging)
-        self.minData = 30
-        # percent of testing data for kNeighbours classifieer
-        self.filters.testsize = 0.4
-        # the minimum passed time needed to move from one station to the another.
-        # This value is set to except blunders effect appeared at the data collection.
-        # By default it is 30 seconds.
-        self.minTime = 30
+        self.filters.unique_names = ['segment_id','NetworkGen','LAC','CID','laccid','quality']
+        self.filters.nNeighbours = variables.averaged_cell_pars['nNeighbors']
+        self.minData = variables.averaged_cell_pars['minData']
+        self.filters.testsize = variables.averaged_cell_pars['testsize']
         self.aver_df = pd.DataFrame()
         # drop this names from database
-        self.dropnames = ['NumRaces','NumUsers','laccid','segment','quality','weight']
+        # self.dropnames = ['NumRaces','NumUsers','laccid','segment','quality','weight']
+        self.dropnames = ['User','rawPower','Active','PSC','TimeStamp','race_id','zip_id','station_id','NumUsers','NumRaces','id_from','id_to','move_type','cell_id','quality','laccid','MCC','geom']
         # the minimum number of rows for each collected unique cell(for preprocessing)
-        self.Lcdelta = 15 # MUST BE IDENTICAL IN SMOOTH MODULE!
-        #instances
-        self.ut = Utils()
-        self.geojsonConn = GeoFilesConn(self.segments_geojson_path,'CODE')
+        self.Lcdelta = variables.averaged_cell_pars['lcDelta'] # MUST BE IDENTICAL IN SMOOTH MODULE!
 
-        self.interpolator = PointInterpolator(self.geojsonConn)
         self.correlator = SignalCorrelator()
         self.powerAveraging = Smooth()
         self.powerAveraging.correlator =self.correlator
         self.powerAveraging.filters = self.filters
         return
-    def postGeoref(self):
-        # 4. post georeferencing
-        self.aver_df['x'] = self.aver_df.apply(lambda x:self.interpolator.interpolate_by_ratio(x['segment'],x['ratio'],0).x,axis = 1)
-        self.aver_df['y'] = self.aver_df.apply(lambda x:self.interpolator.interpolate_by_ratio(x['segment'],x['ratio'],0).y,axis = 1)
-        self.aver_df = self.aver_df.sort(['segment','ratio','laccid'])
-        self.aver_df['index'] = range(0,len(self.aver_df))
-        self.aver_df = self.aver_df.set_index(['index'])
-        if self.output:
-            self.aver_df.to_csv(self.saveCellSmoothed,index_label = 'index')
-            for jname in self.powerAveraging.journal.keys():
-                fpath = self.jpath  + Utils.fromCurrentTime(jname,'.csv')
-                self.powerAveraging.journal[jname].to_csv(fpath)
-            self.segmentsStepsDf.to_csv(self.segInfoPath,index_label='index')
-    def pushToDb(self):
-        """
-        Pushing data to database
-        :return:
-        """
-        self.aver_df.drop(self.dropnames,inplace = True, axis = 1)
-        for id in ['segment_start_id','segment_end_id']:
-            self.aver_df[id] = self.aver_df[id].apply(int)
-        db = Dbase(self.db_output,key = "")
-        db.connection.text_factory = str
-        self.aver_df.to_sql(self.tabname,con = db.connection)
-        db.connection.close()
-    def preprocData(self,Df,badUsers):
-        """
-        Preprocessing of input dataFrame
-        :param Df:
-        :param badUsers:
-        :return:
-        """
-        if self.mkey!= '':
-            self.mkey = "-" + self.mkey
-        self.preprocDf = Preproc(df = Df,
-                                 activeBagPath = self.activeBagPath,
-                                   users = badUsers
-                                 )
-        # process move-data
-        self.preprocDf.proc_cell_df()
-        self.subwayInfoDf = self.preprocDf.computeAverTime(minTimeSegment = self.minTime,
-                                                           _output = self.subwayInfoPath,
-                                                            push = self.push)
-        self.preprocDf.filterLackofData(self.Lcdelta)
 
-        self.preprocDf.exclude_constant_signals()
-        # split data by Operators
-        self.preprocDf.splitByNetworkAndSave(self.output,mkey = self.mkey)
-        # save results
-        if self.push:
-            self.preprocDf.df.to_csv(self.output+ "\\"  + "pre_log_points "+ self.mkey + ".csv")
-        return self.preprocDf.df,self.subwayInfoDf
-    def iterateBySegment(self,MoveDf,subwayInfoDf):
-        """
-        Iterate by segments and bind the result to the one dataframe.
-        :param MoveDf: input dataframe
-        :return:
-        """
-        self.segmentsStepsDf = pd.DataFrame()
+    def iterateBySegment(self):
+        #self.segmentsStepsDf = pd.DataFrame()
         networkErrors = pd.DataFrame()
-        step = 0
-        segments = MoveDf['segment'].unique()
-        seg_len = len(segments)
-        print("Segments in processing..")
-        #loop through the segments
-        for seg in segments:
-            step+=1
-            sys.stdout.write("\r"+(str(step)+"/"+str(seg_len)))
+
+        grouped_move = self.move_df.groupby(['id_from','id_to'])
+        seg_len = len(grouped_move.groups.keys())
+        # set default quality
+        i = 0
+        for (id_from,id_to),segment_df in grouped_move:
+            net_quality_segment = pd.DataFrame()
+            smoothed_df_segment = pd.DataFrame()
+            i+=1
+            sys.stdout.write(str(i) + " / " + str(seg_len) + ' segment_id : ' + id_from + " - " + id_to)
             sys.stdout.flush()
-            print " : " + seg
-            seg_df = MoveDf[MoveDf['segment'] == seg]
-            pathTime = subwayInfoDf.loc[seg]['pathTime']
+            segment_info = self.subway_info_df[self.subway_info_df['segment_id'] == (id_from.zfill(3) + '-' + id_to.zfill(3))]
+            if not segment_info.empty:
+                time_median = segment_info['time_median'].iloc[0]
+            else:
+                raise Exception("Median time has not been computed!")
             # split data to equal time step(cut on one second steps)
-            time_Df,interpStep = self.splitByTimeStep(pathTime)
+            time_Df,interpStep = self.splitByTimeStep(time_median)
             # write ratio length to the DataFrame
-            segRow = pd.DataFrame({'segment':[seg],'interpStep':interpStep,'index':[step]})
-            self.segmentsStepsDf = pd.concat([self.segmentsStepsDf,segRow])
+            #segRow = pd.DataFrame({'segment':[seg],'interpStep':interpStep,'index':[step]})
+            #self.segmentsStepsDf = pd.concat([self.segmentsStepsDf,segRow])
 
             self.filters.time_Df = time_Df
-            self.powerAveraging.segmentTime = pathTime
-
-            for laccid in seg_df['laccid'].unique():
+            self.powerAveraging.segmentTime = time_median
+            segment_laccid_gr = segment_df.groupby(['LAC','CID','NetworkGen'])
+            #segment_df.to_csv("/temp/test_segments" + "/test_segment_"+id_from+"_"+id_to+".csv")
+            for (LAC,CID,NetGEN),laccid_gr in segment_laccid_gr:
+                NumRaces = len(np.unique(laccid_gr['race_id']))
                 # loop through laccids
-                laccid_df = seg_df[seg_df['laccid']==laccid]
+                #try:
+                laccid_gr,MNC = self.extract_false_mncs(laccid_gr)
+                if not MNC:
+                    continue
                 # check if frame contains error-rows(for ex. points which contains lac and cid from the next cell, but MNC from the last cell)
-                #errorRows,laccid_df = self.powerAveraging.splitFrameByMinLen(laccid_df,by = 'NetworkType')
-
-                if laccid_df.shape[0]>self.minData:
+                errorRows,laccid_gr = self.powerAveraging.splitFrameByMinLen(laccid_gr,by = 'NetworkType')
+                if len(laccid_gr) > self.minData:
                     # filter all parts of data with a few datasets.
-                    laccid_df_time = self.distToTimeRatio(laccid_df,time_Df)
                     self.powerAveraging.interpStep = interpStep
                     # initialization of smoothing algorithm
-                    smoothed,fewData = self.powerAveraging.initCombinations(laccid_df_time,combinations='RU')
-                    self.aver_df = pd.concat([self.aver_df,smoothed],ignore_index = True)
-                    # drop columns from fewdataDf
-                    dropcols = [col for col in list(fewData.columns) if (col not in list(self.aver_df.columns))]
-                    fewData = fewData.drop(dropcols,axis = 1)
-                    fewData['few'] = 1
-                    self.aver_df['few'] = 0
-                    # attach segments with just 1 measurement
-                    # self.aver_df = pd.concat([self.aver_df,fewData],ignore_index = True)
-                #networkErrors = pd.concat([networkErrors,errorRows])
+                    smoothed_df,fewData = self.powerAveraging.initCombinations(laccid_gr,combinations='RU')
+                    if not smoothed_df.empty:
+                        net_quality_slice = smoothed_df[['segment_id','laccid','NetworkGen','quality','ratio']]
+                        net_quality_slice.loc[:,'MNC'] = MNC
+                        net_quality_slice.loc[:,'NumRaces'] = NumRaces  # todo:check!
+                        net_quality_slice.loc[:,'NumUsers'] = self.powerAveraging.num_users
+                        net_quality_slice.loc[:,'city'] = self.city
+                        smoothed_df.loc[:,'city'] = self.city
+                        smoothed_df.loc[:,'MNC'] = MNC
+
+                        smoothed_df = utilities.dropMultipleCols(smoothed_df,self.dropnames)
+
+                        smoothed_df_segment = pd.concat([smoothed_df_segment,smoothed_df])
+                        net_quality_segment = pd.concat([net_quality_segment,net_quality_slice])
+            # extract number of LACCIDs and apply it for line geometry
+            #self.segments = list(np.unique(self.move_df['segment_id']))
+            # - process averaged cell
+            self.interpolate_to_equal_time_ratio_and_push(smoothed_df_segment)
+            self.push_cell_quality(net_quality_segment)
+            self.push_cell_grabbing_quality(net_quality_segment)
+            utilities.plot_signal_power(self.server_conn,'georeferencing_averaged',id_from.zfill(3),id_to.zfill(3),self.city)
+        # write into the appropriate table that process has been complited
+        for z_id in self.zip_ids:
+            utilities.update_postgre_rows(self.server_conn,self.server_conn['tables']['processing_status'],z_id,'averaged',True,index_col = 'zip_id')
+
+
         print networkErrors
+    def extract_false_mncs(self,df,field = 'MNC'):
+        false_mncs = []
+        init_df = df.copy()
+        unique_vals = list(df[field].unique())
+        for f in unique_vals:
+            if f!='-1':
+                mnc_gr = df[df[field] == f]
+                if not len(mnc_gr)> self.minData:
+                    false_mncs.append(f)
+        unique_vals.sort(reverse=True)
+        if len(false_mncs)>0:
+            df = df[~df[field].isin(false_mncs)]
+            unique_vals = list(df[field].unique())
+            if len(unique_vals)>1:
+                print "There are many " + field + ' : ', unique_vals
+                return df,None
+            if len(unique_vals) == 0:
+                print  "Too small slice: ",len(init_df)," rows"
+                return df,None
+
+        return df,unique_vals[0]
+    def postProc(self):
+        print "Post georeferencing starts"
+
+        self.segments = list(np.unique(self.move_df['segment_id']))
+        # - process averaged cell
+        self.interpolate_to_equal_time_ratio_and_push(self.aver_df)
+
+        #self.aver_df['geom'] = self.aver_df.apply(lambda x:
+         #                                      utilities.interpolator(self.server_conn,
+          #                                                            self.server_conn['tables']['lines'] ,
+          #                                                            x['id_from'],
+          #                                                            x['id_to'],
+            #                                                          x['ratio'],
+            #                                                          self.city),axis = 1)
+
+        # - process network quality
+
+        #utilities.remove_slice_from_postgres(self.server_conn,self.server_conn['tables']['subway_cell_quality'],'segment_id',self.segments)
+
+        # - process data quality
+
+        # - ggplotting
+        for seg in self.segments:
+            utilities.plot_signal_power(self.server_conn,'georeferencing_averaged',seg.split('-')[0],seg.split('-')[1],self.city)
+
+    def preprocData(self):
+        """
+        Preprocessing of input dataFrame
+
+        """
+
+        self.preproc_df = Preproc(df = self.move_df)
+        # process move-data
+        self.preproc_df.proc_cell_df()
+        self.subway_info_df = self.preproc_df.computeAverTime()
+        self.subway_info_df['city'] = self.city
+        utilities.update_postgre_rows_cols(self.server_conn,self.server_conn['tables']['subway_info'],['segment_id'],self.subway_info_df)
+        self.preproc_df.filterLackofData(self.Lcdelta)
+        # todo : define if this operations is need
+        #self.preproc_df.exclude_constant_signals()
+        self.move_df = self.preproc_df.df
+        self.move_df['quality'] = variables.averaged_cell_pars['default_quality']
+        self.move_df['city'] = self.city
+        # split data by Operators
+
     def processTestDf(self,df,subwayInfoDf):
         """
         Processing of input test frame.loop through the segments and interpolate each of them by equal steps.
@@ -188,6 +212,47 @@ class Averaging():
                 _gr = self.distToTimeRatio(gr,time_Df,toTime=True)
                 Interpolated = pd.concat([Interpolated,_gr])
         return Interpolated
+    def interpolate_to_equal_time_ratio_and_push(self,df):
+        print "Init interpolate_to_equal_time_ratio_and_push"
+        grouped_segments = df.groupby(['segment_id'])
+        #conn_string = "host = %s user = %s password = %s dbname = %s port = %s" % (self.server_conn['host'],
+        #                                                                      self.server_conn['user'],
+        #                                                                      self.server_conn['password'],
+        #                                                                      self.server_conn['dbname'],
+        #                                                                      self.server_conn['postgres_port'])
+        #conn = psycopg2.connect(conn_string)
+        #cur = conn.cursor()
+        #sql = "INSERT INTO %s()"
+
+        for seg_id,seg_gr in grouped_segments:
+            utilities.remove_slice_from_postgres(self.server_conn,self.server_conn['tables']['averaged_cell_meta'],'segment_id',[seg_id])
+            cell_grouped = seg_gr.groupby(['LAC','CID','MNC','NetworkGen'])
+            for (LAC,CID,MNC,NetGen),cell_gr in cell_grouped:
+                interp_df = pd.DataFrame()
+                _cell_gr = cell_gr.sort_values(by = ['ratio'])
+                # get segment from database averaged_geo frame
+                geo_fr = self.averaged_geo[(self.averaged_geo.index.get_level_values(2) == seg_id)&
+                                           (self.averaged_geo.index.get_level_values(0) == self.city)]
+                if not geo_fr.empty:
+                    geo_ratios = list(geo_fr.index.get_level_values(1).astype(np.float))
+                    f = interpolate.interp1d(_cell_gr['ratio'],_cell_gr['Power'],bounds_error = False)
+                    for i,row in _cell_gr.iterrows():
+                        _row = row.copy()
+                        interp_ratio_ix = np.searchsorted(geo_ratios,[row['ratio']])[0]
+                        try:
+                            interp_ratio = geo_ratios[interp_ratio_ix]
+                            _row['ratio'] = interp_ratio
+                            # todo: correct!
+                            _row['Power'] = f(interp_ratio).base[0][0]
+                            interp_df = pd.concat([interp_df,pd.DataFrame(_row).transpose()])
+                        except:
+                            print "Point with ratio = ", row['ratio'], "could not be interpolated"
+                    #power = np.interp(list(geo_ratios.astype(np.float)),list(_seg_gr['ratio'].astype(np.float)),list(_seg_gr['Power'].astype(np.float)))
+                    utilities.insert_pd_to_postgres(interp_df,self.server_conn,self.server_conn['tables']['averaged_cell_meta'])
+                else:
+                    print "Segment = ",seg_id ," does not exist at the city = ",self.city
+
+
 
     def distToTimeRatio(self,distDf,timeDf,toTime = False):
         """
@@ -213,7 +278,7 @@ class Averaging():
                     if toTime:
                         _row.loc[row.index[0],'TimeStamp'] = _grDf.loc[_grDf.index[i],'time']
                     newDf = pd.concat([newDf,_row])
-                newDf['Power'] = np.interp(newDf['ratio'],gr['ratio'],gr['Power'])
+                newDf['Power'] = np.interp(newDf['ratio'].astype(np.float),gr['ratio'].astype(np.float),gr['Power'].astype(np.float))
                 LCDF = pd.concat([LCDF,newDf])
         return LCDF
     def splitByTimeStep(self,pathTime,step = 1):
@@ -240,7 +305,7 @@ class Averaging():
         """
         MainDf = pd.DataFrame()
         TestDf = pd.DataFrame()
-        grouped = df.groupby(['segment'])
+        grouped = df.groupby(['segment_id'])
         for seg,gr in grouped:
             _gr = gr.copy()
             races = _gr.race_id.unique()
@@ -254,60 +319,81 @@ class Averaging():
                 MainDf = pd.concat([MainDf,mainFrame])
                 TestDf = pd.concat([TestDf,testFrame])
         return MainDf,TestDf
-def main():
-    parser = ArgumentParser()
-    parser.add_argument('-p', '--preproc',action = 'store_true',help = 'Preprocess referenced data')
-    parser.add_argument('-a', '--average',action = 'store_true',help = 'Average referenced data')
-    parser.add_argument('-g', '--georef',action = 'store_true',help = 'Post-georeferencing of input data')
-    parser.add_argument('-d', '--pushToDb',action = 'store_true',help = 'push result to the database')
-    parser.add_argument('-m', '--mkey', type = str,default="",help = "Mark key. For example key for stops-data is 'stop',whereas for"
-                                                                    "interchanges-data is 'inter'. That keyword will be passed to the output name")
-    parser.add_argument('-l', '--lines',type = str,help = 'Path to subway lines geojson')
-    parser.add_argument('-s', '--subwayInfoDf', type = str,help = 'DataFrame containing subway information')
-    parser.add_argument('-o','--output',type = str,help = 'Path to the DIR to write out processed data')
-    parser.add_argument('input',type = str, help = 'Path to the referenced data')
+    def push_cell_grabbing_quality(self,pts_df):
+        print "Init push_cell_grabbing_quality"
+        conn = psycopg2.connect(self.connString)
+        conn.rollback()
+        cur = conn.cursor()
+        sql = """INSERT INTO """ + self.server_conn['tables']['subway_cell_grabbing_quality'] + """(segment_id,"NetworkGen","MNC",geom,quality,"NumRaces","NumUsers",city)
+        VALUES(%(segment_id)s,%(NetworkGen)s,%(MNC)s,ST_GeomFromText(%(geom)s,3857),%(quality)s,%(NumRaces)s,%(NumUsers)s,%(city)s)"""
+        pts_df['id_from'] = pts_df['segment_id'].apply(lambda x : x.split('-')[0])
+        pts_df['id_to'] = pts_df['segment_id'].apply(lambda x : x.split('-')[1])
+        pts_df['geom'] = pts_df.apply(lambda x:
+                                              utilities.interpolator(self.server_conn,
+                                                                      self.server_conn['tables']['lines'] ,
+                                                                      x['id_from'],
+                                                                      x['id_to'],
+                                                                      x['ratio'],
+                                                                      self.city),axis = 1)
+        pts_df_grouped = pts_df.groupby(['MNC','NetworkGen'])
+        for i,mnc_gr in pts_df_grouped:
+            _mnc_gr = mnc_gr.sort_values(by=['ratio'])
+            line_wkt = utilities.wkbpts_to_wkbline(list(_mnc_gr['geom']),wkt=True)
+            lc_row = _mnc_gr[['segment_id','NetworkGen','MNC','city','NetworkGen','quality','NumUsers','NumRaces']].iloc[0]
+            lc_row['geom'] = line_wkt
+            utilities.remove_slice_from_postgres(self.server_conn,self.server_conn['tables']['subway_cell_grabbing_quality'],'segment_id',[lc_row['segment_id']])
+            cur.execute(sql,lc_row.to_dict())
+            conn.commit()
+        conn.close()
+    def push_cell_quality(self,pts_df):
+        print "Init push_cell_quality"
+        conn = psycopg2.connect(self.connString)
+        conn.rollback()
+        cur = conn.cursor()
+        sql = """INSERT INTO """ + self.server_conn['tables']['subway_cell_quality'] + """(segment_id,"NetworkGen","MNC",geom,cell_num,city)
+        VALUES(%(segment_id)s,%(NetworkGen)s,%(MNC)s,ST_GeomFromText(%(geom)s,3857),%(cell_num)s,%(city)s)"""
 
-    args = parser.parse_args()
-    dbAveraging = Averaging(preproc = args.preproc,
-          average = args.average,
-          georef = args.georef,
-          pushToDb = args.pushToDb,
-          lines_path = args.lines,
-          subwayInfoDf = args.subwayInfoDf,
-          mkey = args.mkey,
-          _input = args.input,
-          _output = args.output)
+        pdlines_df = pd.DataFrame()
+        pts_df['id_from'] = pts_df['segment_id'].apply(lambda x : x.split('-')[0])
+        pts_df['id_to'] = pts_df['segment_id'].apply(lambda x : x.split('-')[1])
 
-    test = False
-    dbTest = False
+        pts_df['geom'] = pts_df.apply(lambda x:
+                                              utilities.interpolator(self.server_conn,
+                                                                      self.server_conn['tables']['lines'] ,
+                                                                      x['id_from'],
+                                                                      x['id_to'],
+                                                                      x['ratio'],
+                                                                      self.city),axis = 1)
+        qua_pts = pts_df.groupby(['segment_id','NetworkGen','MNC','ratio','geom','city'])['laccid'].apply(lambda x : len(np.unique(x)))
+        qua_pts = qua_pts.reset_index()
+        qua_pts.columns = ['segment_id','NetworkGen','MNC','ratio','geom','city','cell_num']
+        #qua_pts = qua_pts.sort_values(by = ['ratio'])
 
-    test_segments = ['098-099','099-098','100-099','099-100','100-101','101-100','074-075','075-074','074-073','073-074','151-219','219-151','068-069','069-068','143-144']
-    #test_segments = ['151-219','219-151']
-    #test_segments = ['099-100']
-        ###must get interactively!###
-    #Df = pd.io.parsers.read_csv(dbAveraging.input,index_col = 'index',low_memory=False)
-    Df = pd.io.parsers.read_csv(dbAveraging.input,low_memory=False)
-    # 2. Pre-processing of input referenced dataframe,according to the phone parameters
-    if dbAveraging.preproc:
-        Df,subwayInfoDf = dbAveraging.preprocData(Df,badUsers = ['sasfeat'])
-    else:
-        subwayInfoDf = pd.io.parsers.read_csv(dbAveraging.subwayInfoDf,index_col = 'segment')
-    if test:
-        Df = Df[Df['segment'].isin(test_segments)]
-    # 3. Average pre-processed data
-    if dbAveraging.average:
-        if dbTest:
-            Df,testDf = dbAveraging.dbTestSplitter(Df)
-            testDf = dbAveraging.processTestDf(testDf,subwayInfoDf)
-            testDf.to_csv(dbAveraging.testDfPath)
-        dbAveraging.iterateBySegment(Df,subwayInfoDf)
-        if dbAveraging.georef:
-            dbAveraging.postGeoref()
+        cell_gr = pd.DataFrame()
+        qua_pts_grouped = qua_pts.groupby(['city','segment_id','geom','NetworkGen','MNC'])
+        for i,qua_pts_gr in qua_pts_grouped:
+            _qua_pts_gr = qua_pts_gr.sort_values(by = ['ratio'])
+            prev_cell_num = _qua_pts_gr['cell_num'].iloc[0]
+            for i,row in _qua_pts_gr.iterrows():
+                if prev_cell_num == row['cell_num']:
+                    cell_gr = pd.concat([cell_gr,pd.DataFrame(row).transpose()])
+                    prev_cell_num = row['cell_num']
+                if (prev_cell_num!=row['cell_num'])or(i == qua_pts.last_valid_index()):
+                    cell_gr = cell_gr.sort_values(by=['ratio'])
+                    line_wkt = utilities.wkbpts_to_wkbline(list(cell_gr['geom']),wkt=True)
+                    lc_row = cell_gr[['segment_id','NetworkGen','MNC','cell_num','city']].iloc[0]
+                    lc_row['geom'] = line_wkt
+                    lc_row['srid'] = '3857'
 
-        # 4. push smoothed dataframe into the sqlite database
-        if dbAveraging.push:
-            dbAveraging.pushToDb()
-if __name__ == '__main__':
-    main()
+                    utilities.remove_slice_from_postgres(self.server_conn,self.server_conn['tables']['subway_cell_quality'],'segment_id',[lc_row['segment_id']])
+                    cur.execute(sql,lc_row.to_dict())
+                    conn.commit()
+                    #pdlines_df = pd.concat([pdlines_df,lc_row])
+                    cell_gr = pd.DataFrame(row).transpose()
+                    prev_cell_num = row['cell_num']
+
+        conn.close()
+        return pdlines_df
+
 
 

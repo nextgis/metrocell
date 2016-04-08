@@ -1,11 +1,13 @@
 __author__ = 'Alex'
 
+import variables
 from sklearn import neighbors
 from sklearn import cross_validation
 from scipy.signal import medfilt
 
 import pandas as pd
 import numpy as np
+#from matplotlib.pyplot import plot
 
 class Filters:
     def __init__(self):
@@ -19,8 +21,9 @@ class Filters:
         #self.max_lc_ratio =  None
         self.levelsNum =     None
         self.time_Df = None
+        self.median_window = variables.averaged_cell_pars['median_window']
         # percent of noise data at each race
-        self.minNoise = 0.3
+        self.minNoise = variables.averaged_cell_pars['minNoise']
     def checkDataBeforeSmooth(self,df,checkFields = None):
         check = True
         if not checkFields:
@@ -35,7 +38,7 @@ class Filters:
         except:
             print ""
         return check
-    def prepareAndPredict(self,df,filt,PredictedDf,missedFields = None,checkFields = 'default',end = False):
+    def prepareAndPredict(self, df, filt, PredictedDf,missedFields = None,checkFields = 'default',end = False,check_data = True):
         """
         initialize smoothing algorithm and check if dataframe should be smoothed
         :param df: {pd.DataFrame}
@@ -47,18 +50,22 @@ class Filters:
         """
         quality = None
         if filt == 'kmeans':
-            check = self.checkDataBeforeSmooth(df,checkFields)
+            if check_data:
+                check = self.checkDataBeforeSmooth(df,checkFields)
+            else:
+                check = True
             if check:
                 unique_dict = self.addUniqueFields(df,missedFields)
                 self.endIndexes,self.levelsNum = self.getBoundaries(df,end)
                 if self.levelsNum>=5:
-                    predictedDict,quality = self.kmeansRegressor(df,end = end)
+                    # predictedDict,quality = self.kmeansRegressor(df,end = end)
+                    predictedDict,quality = self.LSPfit(df)
                     smoothed = self.combineColumns(predictedDict,unique_dict,quality)
                 else:
                     smoothed = pd.DataFrame()
             else:
                 smoothed = df
-        if filt == 'median':
+        elif filt == 'median':
             smoothed = self.medianFilter(df)
         PredictedDf = pd.concat([PredictedDf,smoothed])
         return PredictedDf
@@ -80,19 +87,20 @@ class Filters:
     def addUniqueFields(self,df,missedFields):
         unique_dict = self.check_uniqueness(df,self.unique_names + missedFields)
         return unique_dict
-    def medianFilter(self,df,window = 7):
+    def medianFilter(self,df):
         """
         Filter by median
         :param df: frame to filter
         :param window: rolling window
         :return:filtered frame
         """
+
         Filtered = pd.DataFrame()
         grouped = df.groupby(['User'])
         for user,gr in grouped:
             _gr = gr.copy()
             _gr.loc[:,'rawPower'] = _gr.loc[:,'Power']
-            _gr.loc[:,'Power'] = medfilt(_gr['Power'],window)
+            _gr.loc[:,'Power'] = medfilt(_gr['Power'],self.median_window)
             Filtered = pd.concat([Filtered,_gr])
         return Filtered
     def kmeansRegressor(self,df,
@@ -212,6 +220,31 @@ class Filters:
             FilteredDf.loc[:,col] = rM(FilteredDf,col,window)
         FilteredDf = FilteredDf[~FilteredDf[col].isnull()]
         return FilteredDf
+    def LSPfit(self,df,max_rank = 2):
+        t = np.array(df['ratio'])
+        y = np.array(df['Power'])
+        coeffs = {}
+        for rank in range(1,max_rank+1):
+            coef = np.polyfit(t,y,rank,full = True)
+            try:
+                coeffs.update({coef[1][0]:rank})
+            except:
+                pass
+           #new_x = np.linspace(np.min(t),np.max(y),50)
+        try:
+            ideal_rank = coeffs[min(coeffs.keys())]
+        except:
+            pass
+        #RANK = 2
+        coef = np.polyfit(t,y,ideal_rank,full = True)
+        quality = np.sqrt(coef[1][0]/(len(t)-1))
+        model = np.poly1d(coef[0])
+        ti = self.endIndexes[:,np.newaxis][:, 0]
+        predicted = model(ti)
+        #plot(ti,predicted,'.')
+        #predicted = [a[0] for a in predicted]
+        smoothed = {'Power': predicted,'ratio': ti}
+        return smoothed,quality
     def getBoundaries(self,df,end = False,col = 'ratio'):
         """
         Get col boundaries (min and max) and number of levels to create new smoothed dataframe
