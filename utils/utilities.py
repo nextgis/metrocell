@@ -71,14 +71,8 @@ def dfTempate(marksFrame,columns = []):
     """
     df = pd.DataFrame(columns = list(marksFrame.columns.values)+columns)
     return df
-def getTextFromFile():
-    """
-    get formula from the textfile
-    :return:
-    """
-    with open(vars.FORMULA) as formula:
-        data = formula.readline()
-    return data
+
+
 def replaceFormulaVars(formula):
     """
     replace formula long variables (BLABLA,TRATATA,...) to (A,B...)
