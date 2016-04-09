@@ -77,6 +77,9 @@ class PrepareAndSplit():
         fullFrame = pd.concat([logFrame,marksFrameIx])
         # fullFrame.ID = fullFrame.ID.astype('int64')
         fullFrame = fullFrame.sort_values(by = ['TimeStamp','inter','stop'])
+        # todo:remove row
+        #pd.options.display.max_rows = 100000
+        #print fullFrame
         fullFrame = fullFrame.set_index([range(0,len(fullFrame))])
         s = pd.Series(list(fullFrame['ID']))
         firstIx = s.first_valid_index()
@@ -145,7 +148,7 @@ class PrepareAndSplit():
             typeDf = sectionFrameUpdated[sectionFrameUpdated[moveType] == 2]
             if not typeDf.empty:
                 Ids = self.stationsId(typeDf)
-                _sectionFrameUpdated = utilities.dropMultipleCols(sectionFrame, self.moveTypes+['Name'])
+                _sectionFrameUpdated = utilities.dropMultipleCols(typeDf, self.moveTypes+['Name'])
                 _sectionFrameUpdated.rename(columns = {'ID':'station_id'},inplace=True)
                 _sectionFrameUpdated['move_type'] = moveType
                 _sectionFrameUpdated['id_from'] = Ids['from']
