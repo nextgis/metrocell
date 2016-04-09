@@ -221,6 +221,9 @@ class Smooth():
             predictedPoints = processedPart[processedPart['controls'] == 1]
             predictedPoint = predictedPoints.iloc[0]
             delta = predictedPoint['ratio'] - analyzedData['ratio']
+            # todo: the algorithm of shifting should exclude bad signals and choose main signal as median but not as the most noisy
+            if delta>variables.averaged_cell_pars['max_shift_delta']:
+                delta = 0
             self.toJournal(predictedPoints,jname)
             trans = {predictedPoint[loopBy]:delta}
         return trans
