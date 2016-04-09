@@ -86,42 +86,43 @@ class Averaging():
 
             self.filters.time_Df = time_Df
             self.powerAveraging.segmentTime = time_median
-            segment_laccid_gr = segment_df.groupby(['LAC','CID','NetworkGen'])
-            #segment_df.to_csv("/temp/test_segments" + "/test_segment_"+id_from+"_"+id_to+".csv")
-            for (LAC,CID,NetGEN),laccid_gr in segment_laccid_gr:
-                NumRaces = len(np.unique(laccid_gr['race_id']))
-                # loop through laccids
-                #try:
-                laccid_gr,MNC = self.extract_false_mncs(laccid_gr)
-                if not MNC:
-                    continue
-                # check if frame contains error-rows(for ex. points which contains lac and cid from the next cell, but MNC from the last cell)
-                errorRows,laccid_gr = self.powerAveraging.splitFrameByMinLen(laccid_gr,by = 'NetworkType')
-                if len(laccid_gr) > self.minData:
-                    # filter all parts of data with a few datasets.
-                    self.powerAveraging.interpStep = interpStep
-                    # initialization of smoothing algorithm
-                    smoothed_df,fewData = self.powerAveraging.initCombinations(laccid_gr,combinations='RU')
-                    if not smoothed_df.empty:
-                        net_quality_slice = smoothed_df[['segment_id','laccid','NetworkGen','quality','ratio']]
-                        net_quality_slice.loc[:,'MNC'] = MNC
-                        net_quality_slice.loc[:,'NumRaces'] = NumRaces  # todo:check!
-                        net_quality_slice.loc[:,'NumUsers'] = self.powerAveraging.num_users
-                        net_quality_slice.loc[:,'city'] = self.city
-                        smoothed_df.loc[:,'city'] = self.city
-                        smoothed_df.loc[:,'MNC'] = MNC
+            segment_net_gen_gr = segment_df.groupby(['NetworkGen'])
+            for NetGEN, net_gen_gr in segment_net_gen_gr:
+                segment_laccid_gr = net_gen_gr.groupby(['LAC','CID'])
+                for (LAC,CID),laccid_gr in segment_laccid_gr:
+                    NumRaces = len(np.unique(laccid_gr['race_id']))
+                    # loop through laccids
+                    #try:
+                    laccid_gr,MNC = self.extract_false_mncs(laccid_gr)
+                    if not MNC:
+                        continue
+                    # check if frame contains error-rows(for ex. points which contains lac and cid from the next cell, but MNC from the last cell)
+                    errorRows,laccid_gr = self.powerAveraging.splitFrameByMinLen(laccid_gr,by = 'NetworkType')
+                    if len(laccid_gr) > self.minData:
+                        # filter all parts of data with a few datasets.
+                        self.powerAveraging.interpStep = interpStep
+                        # initialization of smoothing algorithm
+                        smoothed_df,fewData = self.powerAveraging.initCombinations(laccid_gr,combinations='RU')
+                        if not smoothed_df.empty:
+                            net_quality_slice = smoothed_df[['segment_id','laccid','NetworkGen','quality','ratio']]
+                            net_quality_slice.loc[:,'MNC'] = MNC
+                            net_quality_slice.loc[:,'NumRaces'] = NumRaces  # todo:check!
+                            net_quality_slice.loc[:,'NumUsers'] = self.powerAveraging.num_users
+                            net_quality_slice.loc[:,'city'] = self.city
+                            smoothed_df.loc[:,'city'] = self.city
+                            smoothed_df.loc[:,'MNC'] = MNC
+                            #smoothed_df.loc[:,'NetworkGen'] = NetGEN
+                            smoothed_df = utilities.dropMultipleCols(smoothed_df,self.dropnames)
 
-                        smoothed_df = utilities.dropMultipleCols(smoothed_df,self.dropnames)
-
-                        smoothed_df_segment = pd.concat([smoothed_df_segment,smoothed_df])
-                        net_quality_segment = pd.concat([net_quality_segment,net_quality_slice])
-            # extract number of LACCIDs and apply it for line geometry
-            #self.segments = list(np.unique(self.move_df['segment_id']))
-            # - process averaged cell
-            self.interpolate_to_equal_time_ratio_and_push(smoothed_df_segment)
-            self.push_cell_quality(net_quality_segment)
-            self.push_cell_grabbing_quality(net_quality_segment)
-            utilities.plot_signal_power(self.server_conn,'georeferencing_averaged',id_from.zfill(3),id_to.zfill(3),self.city)
+                            smoothed_df_segment = pd.concat([smoothed_df_segment,smoothed_df])
+                            net_quality_segment = pd.concat([net_quality_segment,net_quality_slice])
+                # extract number of LACCIDs and apply it for line geometry
+                #self.segments = list(np.unique(self.move_df['segment_id']))
+                # - process averaged cell
+                self.interpolate_to_equal_time_ratio_and_push(smoothed_df_segment)
+                self.push_cell_quality(net_quality_segment)
+                self.push_cell_grabbing_quality(net_quality_segment)
+                utilities.plot_signal_power(self.server_conn,'georeferencing_averaged',id_from.zfill(3),id_to.zfill(3),self.city)
         # write into the appropriate table that process has been complited
         for z_id in self.zip_ids:
             utilities.update_postgre_rows(self.server_conn,self.server_conn['tables']['processing_status'],z_id,'averaged',True,index_col = 'zip_id')
@@ -215,19 +216,16 @@ class Averaging():
     def interpolate_to_equal_time_ratio_and_push(self,df):
         print "Init interpolate_to_equal_time_ratio_and_push"
         grouped_segments = df.groupby(['segment_id'])
-        #conn_string = "host = %s user = %s password = %s dbname = %s port = %s" % (self.server_conn['host'],
-        #                                                                      self.server_conn['user'],
-        #                                                                      self.server_conn['password'],
-        #                                                                      self.server_conn['dbname'],
-        #                                                                      self.server_conn['postgres_port'])
-        #conn = psycopg2.connect(conn_string)
-        #cur = conn.cursor()
-        #sql = "INSERT INTO %s()"
-
         for seg_id,seg_gr in grouped_segments:
-            utilities.remove_slice_from_postgres(self.server_conn,self.server_conn['tables']['averaged_cell_meta'],'segment_id',[seg_id])
             cell_grouped = seg_gr.groupby(['LAC','CID','MNC','NetworkGen'])
             for (LAC,CID,MNC,NetGen),cell_gr in cell_grouped:
+                utilities.remove_slice_from_postgres2(self.server_conn,self.server_conn['tables']['averaged_cell_meta'],
+                                                     segment_id = seg_id,
+                                                     LAC = LAC,
+                                                     CID = CID,
+                                                     MNC = MNC,
+                                                     NetworkGen = NetGen
+                                                     )
                 interp_df = pd.DataFrame()
                 _cell_gr = cell_gr.sort_values(by = ['ratio'])
                 # get segment from database averaged_geo frame
@@ -338,10 +336,20 @@ class Averaging():
         pts_df_grouped = pts_df.groupby(['MNC','NetworkGen'])
         for i,mnc_gr in pts_df_grouped:
             _mnc_gr = mnc_gr.sort_values(by=['ratio'])
+
+            # todo: think about better algorithm
+            max_quality = max(_mnc_gr['quality'])
+            _mnc_gr['quality'] = max_quality
+
             line_wkt = utilities.wkbpts_to_wkbline(list(_mnc_gr['geom']),wkt=True)
             lc_row = _mnc_gr[['segment_id','NetworkGen','MNC','city','NetworkGen','quality','NumUsers','NumRaces']].iloc[0]
             lc_row['geom'] = line_wkt
-            utilities.remove_slice_from_postgres(self.server_conn,self.server_conn['tables']['subway_cell_grabbing_quality'],'segment_id',[lc_row['segment_id']])
+            utilities.remove_slice_from_postgres2(self.server_conn, self.server_conn['tables']['subway_cell_quality'],
+                                                          segment_id = [lc_row['segment_id']],
+                                                          city = lc_row['city'],
+                                                          MNC = lc_row['MNC'],
+                                                          NetworkGen = lc_row['NetworkGen']
+                                                          )
             cur.execute(sql,lc_row.to_dict())
             conn.commit()
         conn.close()
@@ -356,7 +364,7 @@ class Averaging():
         pdlines_df = pd.DataFrame()
         pts_df['id_from'] = pts_df['segment_id'].apply(lambda x : x.split('-')[0])
         pts_df['id_to'] = pts_df['segment_id'].apply(lambda x : x.split('-')[1])
-
+        # reference each point of input dataframe
         pts_df['geom'] = pts_df.apply(lambda x:
                                               utilities.interpolator(self.server_conn,
                                                                       self.server_conn['tables']['lines'] ,
@@ -370,27 +378,48 @@ class Averaging():
         #qua_pts = qua_pts.sort_values(by = ['ratio'])
 
         cell_gr = pd.DataFrame()
-        qua_pts_grouped = qua_pts.groupby(['city','segment_id','geom','NetworkGen','MNC'])
+        qua_pts_grouped = qua_pts.groupby(['city','segment_id','NetworkGen','MNC'])
         for i,qua_pts_gr in qua_pts_grouped:
             _qua_pts_gr = qua_pts_gr.sort_values(by = ['ratio'])
             prev_cell_num = _qua_pts_gr['cell_num'].iloc[0]
+            last_ratio = qua_pts_gr['ratio'].iloc[0]
+            ratio_split = False
             for i,row in _qua_pts_gr.iterrows():
+                if row['MNC'] =='99':
+                    pass
                 if prev_cell_num == row['cell_num']:
-                    cell_gr = pd.concat([cell_gr,pd.DataFrame(row).transpose()])
-                    prev_cell_num = row['cell_num']
-                if (prev_cell_num!=row['cell_num'])or(i == qua_pts.last_valid_index()):
-                    cell_gr = cell_gr.sort_values(by=['ratio'])
-                    line_wkt = utilities.wkbpts_to_wkbline(list(cell_gr['geom']),wkt=True)
-                    lc_row = cell_gr[['segment_id','NetworkGen','MNC','cell_num','city']].iloc[0]
-                    lc_row['geom'] = line_wkt
-                    lc_row['srid'] = '3857'
+                    # todo: experement
+                    delta_ratio = row['ratio']-last_ratio
+                    # print last_ratio,row['ratio'],delta_ratio
+                    if delta_ratio< 0.2:
+                        cell_gr = pd.concat([cell_gr,pd.DataFrame(row).transpose()])
+                        prev_cell_num = row['cell_num']
+                        last_ratio = row['ratio']
+                    else:
+                        print "High delta ratio!",delta_ratio,row['MNC']
+                        ratio_split = True
+                if (prev_cell_num!=row['cell_num'])or(i == _qua_pts_gr.last_valid_index())or(ratio_split):
+                    if len(cell_gr)>1:
+                        cell_gr = cell_gr.sort_values(by=['ratio'])
+                        line_wkt = utilities.wkbpts_to_wkbline(list(cell_gr['geom']),wkt=True)
+                        lc_row = cell_gr[['segment_id','NetworkGen','MNC','cell_num','city']].iloc[0]
+                        lc_row['geom'] = line_wkt
+                        lc_row['srid'] = '3857'
 
-                    utilities.remove_slice_from_postgres(self.server_conn,self.server_conn['tables']['subway_cell_quality'],'segment_id',[lc_row['segment_id']])
-                    cur.execute(sql,lc_row.to_dict())
-                    conn.commit()
+                        utilities.remove_slice_from_postgres2(self.server_conn, self.server_conn['tables']['subway_cell_quality'],
+                                                              segment_id = [lc_row['segment_id']],
+                                                              city = lc_row['city'],
+                                                              MNC = lc_row['MNC'],
+                                                              NetworkGen = lc_row['NetworkGen']
+                                                              )
+                        cur.execute(sql,lc_row.to_dict())
+                        conn.commit()
                     #pdlines_df = pd.concat([pdlines_df,lc_row])
-                    cell_gr = pd.DataFrame(row).transpose()
+                    # cell_gr = pd.DataFrame(row).transpose()
+                    cell_gr = pd.DataFrame()
                     prev_cell_num = row['cell_num']
+                    last_ratio = row['ratio']
+                    ratio_split = False
 
         conn.close()
         return pdlines_df

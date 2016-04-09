@@ -333,6 +333,22 @@ def remove_slice_from_postgres(db_conn,tabname,whereas_key,whereas_vals):
             pass
     conn.close()
     return
+def remove_slice_from_postgres2(db_conn,tabname,**whereas):
+    connString = "host = %s user = %s password = %s dbname = %s" % (db_conn['host'],db_conn['user'],db_conn['password'],db_conn['dbname'])
+    conn = psycopg2.connect(connString)
+    conn.rollback()
+    cur = conn.cursor()
+    sql_base = "DELETE FROM %s WHERE "%tabname
+    for key,val in whereas.iteritems():
+        sql = sql_base+" %s = '%s' AND "%(key, val)
+    sql = sql[:-4]
+    try:
+        cur.execute(sql)
+        conn.commit()
+    except:
+        pass
+    conn.close()
+    return
 def interpolate_averaged_points(db_conn,lines_table,averaged_pts_table,step=40):
     Seg_fr = pd.DataFrame()
     connString = "host = %s user = %s password = %s dbname = %s port = %s" % (db_conn['host'],

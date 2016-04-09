@@ -108,6 +108,8 @@ averaged_cell_pars = {'nNeighbors':50,  # the number of neighbours (for kNeighbo
                       'frameLength' : 5,    # minimum length of signal
                       'maxLag' : 7.5,
 
+                      'max_shift_delta':0.2,
+
                       'interp_step_meters':20,
                       'median_window':7,
 

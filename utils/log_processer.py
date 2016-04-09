@@ -65,8 +65,16 @@ def log_processer(city,inbox_filename,session,aver):
     if (aver)&(not (True in np.unique(raw_status_df['averaged']))):
         # 4. Average georeferenced logs
         _averager = averaging.Averaging(SERVER,AVERAGEDTABLE,input_ids,CITY)
-        _averager.preprocData()
-        _averager.iterateBySegment()
+        if not _averager.move_df.empty:
+            _averager.preprocData()
+            _averager.iterateBySegment()
+        else:
+            old_stdout = sys.stdout
+            log_file = open(variables.LOGSPATH + 'zip_averaging_errors.log',"a")
+            sys.stdout = log_file
+            print "zip_ids = ",input_ids
+            sys.stdout = old_stdout
+            log_file.close()
         #_averager.postProc()
 
 

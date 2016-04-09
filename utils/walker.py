@@ -79,5 +79,5 @@ def walker(aver):
     #log_file.close()
     return
 if __name__ =='__main__':
-    aver = False
+    aver = True
     walker(aver)
