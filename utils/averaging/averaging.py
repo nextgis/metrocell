@@ -119,10 +119,12 @@ class Averaging():
                 # extract number of LACCIDs and apply it for line geometry
                 #self.segments = list(np.unique(self.move_df['segment_id']))
                 # - process averaged cell
-                self.interpolate_to_equal_time_ratio_and_push(smoothed_df_segment)
-                self.push_cell_quality(net_quality_segment)
-                self.push_cell_grabbing_quality(net_quality_segment)
-                utilities.plot_signal_power(self.server_conn,'georeferencing_averaged',id_from.zfill(3),id_to.zfill(3),self.city)
+                if not smoothed_df_segment.empty:
+                    self.interpolate_to_equal_time_ratio_and_push(smoothed_df_segment)
+                    utilities.plot_signal_power(self.server_conn,'georeferencing_averaged',id_from.zfill(3),id_to.zfill(3),self.city)
+                if not net_quality_segment.empty:
+                    self.push_cell_quality(net_quality_segment)
+                    self.push_cell_grabbing_quality(net_quality_segment)
         # write into the appropriate table that process has been complited
         for z_id in self.zip_ids:
             utilities.update_postgre_rows(self.server_conn,self.server_conn['tables']['processing_status'],z_id,'averaged',True,index_col = 'zip_id')
@@ -150,12 +152,12 @@ class Averaging():
                 return df,None
 
         return df,unique_vals[0]
-    def postProc(self):
-        print "Post georeferencing starts"
+    #def postProc(self):
+     #   print "Post georeferencing starts"
 
-        self.segments = list(np.unique(self.move_df['segment_id']))
+     #   self.segments = list(np.unique(self.move_df['segment_id']))
         # - process averaged cell
-        self.interpolate_to_equal_time_ratio_and_push(self.aver_df)
+      #  self.interpolate_to_equal_time_ratio_and_push(self.aver_df)
 
         #self.aver_df['geom'] = self.aver_df.apply(lambda x:
          #                                      utilities.interpolator(self.server_conn,
@@ -172,8 +174,8 @@ class Averaging():
         # - process data quality
 
         # - ggplotting
-        for seg in self.segments:
-            utilities.plot_signal_power(self.server_conn,'georeferencing_averaged',seg.split('-')[0],seg.split('-')[1],self.city)
+      #  for seg in self.segments:
+      #      utilities.plot_signal_power(self.server_conn,'georeferencing_averaged',seg.split('-')[0],seg.split('-')[1],self.city)
 
     def preprocData(self):
         """
@@ -216,6 +218,7 @@ class Averaging():
     def interpolate_to_equal_time_ratio_and_push(self,df):
         print "Init interpolate_to_equal_time_ratio_and_push"
         grouped_segments = df.groupby(['segment_id'])
+
         for seg_id,seg_gr in grouped_segments:
             cell_grouped = seg_gr.groupby(['LAC','CID','MNC','NetworkGen'])
             for (LAC,CID,MNC,NetGen),cell_gr in cell_grouped:

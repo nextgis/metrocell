@@ -221,6 +221,7 @@ class Filters:
         FilteredDf = FilteredDf[~FilteredDf[col].isnull()]
         return FilteredDf
     def LSPfit(self,df,max_rank = 2):
+        ideal_rank = None
         t = np.array(df['ratio'])
         y = np.array(df['Power'])
         coeffs = {}
@@ -236,15 +237,19 @@ class Filters:
         except:
             pass
         #RANK = 2
-        coef = np.polyfit(t,y,ideal_rank,full = True)
-        quality = np.sqrt(coef[1][0]/(len(t)-1))
-        model = np.poly1d(coef[0])
-        ti = self.endIndexes[:,np.newaxis][:, 0]
-        predicted = model(ti)
-        #plot(ti,predicted,'.')
-        #predicted = [a[0] for a in predicted]
-        smoothed = {'Power': predicted,'ratio': ti}
-        return smoothed,quality
+        if ideal_rank:
+            coef = np.polyfit(t,y,ideal_rank,full = True)
+            quality = np.sqrt(coef[1][0]/(len(t)-1))
+            model = np.poly1d(coef[0])
+            ti = self.endIndexes[:,np.newaxis][:, 0]
+            predicted = model(ti)
+            #plot(ti,predicted,'.')
+            #predicted = [a[0] for a in predicted]
+            smoothed = {'Power': predicted,'ratio': ti}
+            return smoothed,quality
+        else:
+            # todo:check
+            return pd.DataFrame(), -1
     def getBoundaries(self,df,end = False,col = 'ratio'):
         """
         Get col boundaries (min and max) and number of levels to create new smoothed dataframe

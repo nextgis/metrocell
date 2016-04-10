@@ -387,7 +387,7 @@ class Smooth():
             for ix,gr in grouped:
                 _gr = gr.copy()
                 if ix in transFrame.columns.values:
-                    translation = transFrame.irow(0)[ix]
+                    translation = transFrame.iloc[0][ix]
                     _gr.loc[:,'ratio'] -=translation
                     UpdatedDf = pd.concat([UpdatedDf,_gr])
             return UpdatedDf
