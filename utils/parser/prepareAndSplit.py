@@ -75,11 +75,7 @@ class PrepareAndSplit():
         logFrame = pd.io.parsers.read_csv(logPath,sep = ";")
         logFrame = utilities.insertColumns(logFrame, columns =self.moveTypes + ['race_id'])
         fullFrame = pd.concat([logFrame,marksFrameIx])
-        # fullFrame.ID = fullFrame.ID.astype('int64')
         fullFrame = fullFrame.sort_values(by = ['TimeStamp','inter','stop'])
-        # todo:remove row
-        #pd.options.display.max_rows = 100000
-        #print fullFrame
         fullFrame = fullFrame.set_index([range(0,len(fullFrame))])
         s = pd.Series(list(fullFrame['ID']))
         firstIx = s.first_valid_index()
@@ -107,12 +103,19 @@ class PrepareAndSplit():
         """
         marksInLog = fullFrame[~fullFrame['race_id'].isnull()]
         marksIxs = marksInLog.groupby('race_id').apply(lambda x : list(x.index))
-        for i in range(1,marksIxs.shape[0]):
-            prev = marksIxs.iloc[i-1]
-            next = marksIxs.iloc[i]
-            fullFrame.loc[prev[0]:prev[-1],'move'] = 2
-            fullFrame.loc[prev[0]:next[0],'race_id'] = marksIxs.index[i-1]
-            sectionFrame = fullFrame.loc[prev[0]:next[0],:].copy()
+        seg_len = marksIxs.shape[0]
+        if seg_len>1:
+            for i in range(1,seg_len):
+                prev = marksIxs.iloc[i-1]
+                next = marksIxs.iloc[i]
+                fullFrame.loc[prev[0]:prev[-1],'move'] = 2
+                fullFrame.loc[prev[0]:next[0],'race_id'] = marksIxs.index[i-1]
+                sectionFrame = fullFrame.loc[prev[0]:next[0],:].copy()
+                self.parseSectionAndDrop(sectionFrame,device)
+        if seg_len == 1:
+            fullFrame['move'] = 2
+            fullFrame['race_id'] = marksIxs.index[0]
+            sectionFrame = fullFrame.copy()
             self.parseSectionAndDrop(sectionFrame,device)
 
     def extractStops(self,section):
@@ -156,6 +159,12 @@ class PrepareAndSplit():
                 _sectionFrameUpdated = utilities.dropMultipleCols(_sectionFrameUpdated,variables.excluded_meta_cols + ['session_id'])
                 _sectionFrameUpdated['city'] = self.city
                 #_sectionFrameUpdated = utilities.floatToInt(_sectionFrameUpdated, ['race_id'])
+                utilities.remove_slice_from_postgres2(self.server_conn,self.server_conn['tables']['parsed_'+device],
+                                                      zip_id = _sectionFrameUpdated['zip_id'].iloc[0],
+                                                      id_from = Ids['from'],
+                                                      id_to = Ids['to'],
+                                                      TimeStamp = round(_sectionFrameUpdated['TimeStamp'].iloc[0],0)
+                                                      )
                 utilities.insert_pd_to_postgres(_sectionFrameUpdated,self.server_conn,self.server_conn['tables']['parsed_'+device])
 
                 #self.dirProcesser.put_in_tidy(typeDf,device,Ids,moveType)
@@ -308,7 +317,6 @@ class PrepareAndSplit():
                        'Logger version name':'Logger_version_name',
                        'Logger version code':'Logger_version_code',
                        },inplace = True)
-            #fr['zip_id'] = zip_id
             device_id = None
             for id,device in self.device_info_df.iterrows():
                 try:
