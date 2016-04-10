@@ -3,8 +3,7 @@ from log_georef import geo_ref
 from averaging import averaging
 import pandas as pd
 import numpy as np
-import os,sys,shutil
-import psycopg2
+import os,sys
 from argparse import ArgumentParser
 import variables
 import utilities
@@ -40,9 +39,6 @@ def log_processer(city,inbox_filename,session,aver):
     # insert the file at the DataBase with corresponded city if it has not been already inserted
     input_ids,input_rows = inbox_file_inserter(inbox_filename)
 
-    #input_rows = utilities.get_pd_df_from_sql(SERVER,SERVER['tables']['input_data'])
-    #input_ids = list(input_rows.index)
-
     # if the data has been accepted
     processing_status = utilities.get_pd_df_from_sql(SERVER,SERVER['tables']['processing_status'],index_col='zip_id')
     raw_status_df = processing_status[processing_status.index.isin(input_ids)]
@@ -75,7 +71,6 @@ def log_processer(city,inbox_filename,session,aver):
             print "zip_ids = ",input_ids
             sys.stdout = old_stdout
             log_file.close()
-        #_averager.postProc()
 
 
 def inbox_file_inserter(inbox_filename):

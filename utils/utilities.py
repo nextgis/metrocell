@@ -194,7 +194,7 @@ def insert_pd_to_postgres(fr,db_conn,table,if_exists = 'append',index=False,retu
             ins_ix = ins_fr.last_valid_index()
             return ins_ix
     except:
-        print "Pd dataframe inserting error", sys.exc_info()[0],sys.exc_info()[1]
+        print "\n Pandas dataframe inserting error", sys.exc_info()[0],sys.exc_info()[1]
 def set_postgis_epsg(server,table):
     connString = "host = %s user = %s password = %s dbname = %s port = %s" % (server['host'],server['user'],server['password'],server['dbname'],server['postgres_port'])
     conn = psycopg2.connect(connString)
