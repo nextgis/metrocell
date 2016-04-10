@@ -158,7 +158,10 @@ class GenerateRaces():
             marks,moveErrorsDf,interErrorsDf = self.compareWithDict(marks,Stations)
             marks,errorsDf = self.concatErrorsDropRows(marks,errorsDf,moveErrorsDf,interErrorsDf)
         marks = utilities.dropMultipleCols(marks,['stationId','sequence'])
-        return marks,indexes,errorsDf
+        if not marks.empty:
+            return marks,indexes,errorsDf
+        else:
+            return marks,[],errorsDf
     def excludeFalseVals(self,y,x):
         y_excluded_x = [y[i] for i in range(0,len(y)) if y[i] not in x]
         return y_excluded_x
@@ -276,7 +279,8 @@ class GenerateRaces():
                 if closedGraph:
                     if stGraph not in closedGraph:
                         check = False
-
+                else:
+                    check = False
         else:
             check = False
         return check

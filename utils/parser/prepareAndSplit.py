@@ -219,9 +219,10 @@ class PrepareAndSplit():
             marksPath = row[device + "Marks"]
             # write race_id and session_id at the mark files
             marksFrameIx,indexes,errorsDf = self.updateMarks(marksPath,indexes,pushErrors)
-            sortedFullFrame = self.concatAndCut(logPath,marksFrameIx)
-            sortedFullFrame['zip_id'] = row['zip_id']
-            self.breakOnSections(sortedFullFrame,device)
+            if not marksFrameIx.empty:
+                sortedFullFrame = self.concatAndCut(logPath,marksFrameIx)
+                sortedFullFrame['zip_id'] = row['zip_id']
+                self.breakOnSections(sortedFullFrame,device)
             if pushErrors:
                 if not errorsDf.empty:
                     errorsDf['zip_id'] = row['zip_id']
@@ -287,7 +288,7 @@ class PrepareAndSplit():
         # only after this step we can start copy marks
         # firstly process the main user (if there are several users at the session)
         mainIds,errors_df = self.loopMarks(userRow,devices,pushErrors= True)
-        if row['session_id']:
+        if (row['session_id'])and(len(mainIds)>0):
             # usersFrame contains only the paths. let's start to copy the marks from main User folder.
             usersFrameUpdated = self.bringing.processFrames(usersFrame,userRow)
             # split other users on sections
