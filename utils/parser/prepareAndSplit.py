@@ -159,12 +159,10 @@ class PrepareAndSplit():
                 _sectionFrameUpdated = utilities.dropMultipleCols(_sectionFrameUpdated,variables.excluded_meta_cols + ['session_id'])
                 _sectionFrameUpdated['city'] = self.city
                 #_sectionFrameUpdated = utilities.floatToInt(_sectionFrameUpdated, ['race_id'])
-                utilities.remove_slice_from_postgres2(self.server_conn,self.server_conn['tables']['parsed_'+device],
-                                                      zip_id = _sectionFrameUpdated['zip_id'].iloc[0],
-                                                      id_from = Ids['from'],
-                                                      id_to = Ids['to'],
-                                                      TimeStamp = round(_sectionFrameUpdated['TimeStamp'].iloc[0],0)
-                                                      )
+                # delete rows if its already exists at the database
+
+
+
                 utilities.insert_pd_to_postgres(_sectionFrameUpdated,self.server_conn,self.server_conn['tables']['parsed_'+device])
 
                 #self.dirProcesser.put_in_tidy(typeDf,device,Ids,moveType)
@@ -238,18 +236,18 @@ class PrepareAndSplit():
         """
         print 'Parser starts'
         print 30*'-'
-        #step = 0
-        #length = len(self.raw_df)
 
         row = self.raw_df.iloc[0]
         zip_id = self.raw_df.first_valid_index()
         zip_ids = list(self.raw_df.index)
+        # remove data containing the same zip_id
+        # it might be if data has been already processed previously
+        for zip_id in zip_ids:
+            for dev in variables.available_devices:
+                utilities.remove_slice_from_postgres2(self.server_conn,self.server_conn['tables']['parsed_'+dev],
+                                                      zip_id = zip_id
+                                                      )
 
-
-        #step+=1
-        #sys.stdout.write("\r" + str(step) + "/" + str(length) + " : ")
-        #sys.stdout.flush()
-        # check if number of phones > 1(if user was grabbing the logs from more then 1 phone)
         if row['session_id']:
             session_rows = self.raw_df[self.raw_df['session_id'] == row['session_id']]
             # loop throuth the users
@@ -295,6 +293,10 @@ class PrepareAndSplit():
             otherUsersFrame = usersFrameUpdated[usersFrameUpdated['mainUser']==0]
             for index,row in otherUsersFrame.iterrows():
                 devices = eval(row['devices'])
+
+                # to preserve errors if device could contain 'external' data.
+                # On the moment of script developing this type of data is experimental
+                devices = [dev for dev in devices if dev in variables.available_devices]
                 self.loopMarks(row,devices,mainIds)
         # save errors in the markFiles
         print ' '
