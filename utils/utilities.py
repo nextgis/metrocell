@@ -340,7 +340,7 @@ def remove_slice_from_postgres2(db_conn,tabname,**whereas):
     cur = conn.cursor()
     sql_base = "DELETE FROM %s WHERE "%tabname
     for key,val in whereas.iteritems():
-        sql = sql_base+" %s = '%s' AND "%(key, val)
+        sql = sql_base+" %s = %s AND "%(key, val)
     sql = sql[:-4]
     try:
         cur.execute(sql)
@@ -362,6 +362,7 @@ def interpolate_averaged_points(db_conn,lines_table,averaged_pts_table,step=40):
         conn = ogr.Open("PG:"+connString)
         lines = conn.GetLayer(db_conn['tables'][lines_table])
         for segment in segments:
+
             lines.SetAttributeFilter("code = '%s' AND city = '%s'"%(segment,city))
             line_feature = lines.GetNextFeature()
             line_geom = line_feature.geometry()
