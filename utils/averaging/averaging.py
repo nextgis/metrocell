@@ -152,31 +152,6 @@ class Averaging():
                 return df,None
 
         return df,unique_vals[0]
-    #def postProc(self):
-     #   print "Post georeferencing starts"
-
-     #   self.segments = list(np.unique(self.move_df['segment_id']))
-        # - process averaged cell
-      #  self.interpolate_to_equal_time_ratio_and_push(self.aver_df)
-
-        #self.aver_df['geom'] = self.aver_df.apply(lambda x:
-         #                                      utilities.interpolator(self.server_conn,
-          #                                                            self.server_conn['tables']['lines'] ,
-          #                                                            x['id_from'],
-          #                                                            x['id_to'],
-            #                                                          x['ratio'],
-            #                                                          self.city),axis = 1)
-
-        # - process network quality
-
-        #utilities.remove_slice_from_postgres(self.server_conn,self.server_conn['tables']['subway_cell_quality'],'segment_id',self.segments)
-
-        # - process data quality
-
-        # - ggplotting
-      #  for seg in self.segments:
-      #      utilities.plot_signal_power(self.server_conn,'georeferencing_averaged',seg.split('-')[0],seg.split('-')[1],self.city)
-
     def preprocData(self):
         """
         Preprocessing of input dataFrame
