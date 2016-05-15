@@ -73,6 +73,7 @@ def log_processer(city,inbox_filename,session,aver):
             log_file.close()
 
 
+
 def inbox_file_inserter(inbox_filename):
     print('Inbox file inserting starts')
     if not SESSION:
@@ -103,6 +104,7 @@ def inbox_file_inserter(inbox_filename):
                 fr = pd.DataFrame({'session_id':[session_id],'zip_basename':[base_inbox],'city':[CITY]})
                 utilities.insert_pd_to_postgres(fr,SERVER,SERVER['tables']['input_data'])
                 updated_fr = utilities.get_pd_df_from_sql(SERVER,SERVER['tables']['input_data'],index_col = 'zip_id')
+                updated_fr = updated_fr.sort_values(by= ['zip_id'])
                 last_inserted_zip_id = updated_fr.last_valid_index()
                 status_row = pd.DataFrame({'zip_id':[last_inserted_zip_id]})
                 utilities.insert_pd_to_postgres(status_row,SERVER,SERVER['tables']['processing_status'])
@@ -121,6 +123,7 @@ def inbox_file_inserter(inbox_filename):
             fr = pd.DataFrame({'session_id':[None],'zip_basename':[inbox_filename],'city':[CITY]})
             utilities.insert_pd_to_postgres(fr,SERVER,SERVER['tables']['input_data'])
             updated_fr = utilities.get_pd_df_from_sql(SERVER,SERVER['tables']['input_data'],index_col = 'zip_id')
+            updated_fr = updated_fr.sort_values(by= ['zip_id'])
             last_inserted_zip_id = updated_fr.last_valid_index()
             status_row = pd.DataFrame({'zip_id':[last_inserted_zip_id]})
             utilities.insert_pd_to_postgres(status_row,SERVER,SERVER['tables']['processing_status'])
