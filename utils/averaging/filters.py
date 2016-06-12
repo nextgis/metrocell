@@ -238,15 +238,22 @@ class Filters:
             pass
         #RANK = 2
         if ideal_rank:
-            coef = np.polyfit(t,y,ideal_rank,full = True)
-            quality = np.sqrt(coef[1][0]/(len(t)-1))
-            model = np.poly1d(coef[0])
-            ti = self.endIndexes[:,np.newaxis][:, 0]
-            predicted = model(ti)
-            #plot(ti,predicted,'.')
-            #predicted = [a[0] for a in predicted]
-            smoothed = {'Power': predicted,'ratio': ti}
-            return smoothed,quality
+            if ideal_rank == 1:
+                control = variables.averaged_cell_pars['poly1']
+            if ideal_rank == 2:
+                control = variables.averaged_cell_pars['poly2']
+            if abs(coef[0][0])>control:
+                coef = np.polyfit(t,y,ideal_rank,full = True)
+                quality = np.sqrt(coef[1][0]/(len(t)-1))
+                model = np.poly1d(coef[0])
+                ti = self.endIndexes[:,np.newaxis][:, 0]
+                predicted = model(ti)
+                #plot(ti,predicted,'.')
+                #predicted = [a[0] for a in predicted]
+                smoothed = {'Power': predicted,'ratio': ti}
+                return smoothed,quality
+            if abs(coef[0][0])<control:
+                return pd.DataFrame(), -1
         else:
             # todo:check
             return pd.DataFrame(), -1

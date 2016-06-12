@@ -122,6 +122,9 @@ class Averaging():
                 if not smoothed_df_segment.empty:
                     self.interpolate_to_equal_time_ratio_and_push(smoothed_df_segment)
                     utilities.plot_signal_power(self.server_conn,'georeferencing_averaged',id_from.zfill(3),id_to.zfill(3),self.city)
+
+                    self.push_deriviative_type(smoothed_df_segment)
+
                 if not net_quality_segment.empty:
                     self.push_cell_quality(net_quality_segment)
                     self.push_cell_grabbing_quality(net_quality_segment)
@@ -165,8 +168,10 @@ class Averaging():
         self.subway_info_df['city'] = self.city
         utilities.update_postgre_rows_cols(self.server_conn,self.server_conn['tables']['subway_info'],['segment_id'],self.subway_info_df)
         self.preproc_df.filterLackofData(self.Lcdelta)
+
         # todo : define if this operations is need
-        #self.preproc_df.exclude_constant_signals()
+        self.preproc_df.exclude_constant_signals()
+
         self.move_df = self.preproc_df.df
         self.move_df['quality'] = variables.averaged_cell_pars['default_quality']
         self.move_df['city'] = self.city
@@ -197,12 +202,14 @@ class Averaging():
         for seg_id,seg_gr in grouped_segments:
             cell_grouped = seg_gr.groupby(['LAC','CID','MNC','NetworkGen'])
             for (LAC,CID,MNC,NetGen),cell_gr in cell_grouped:
-                utilities.remove_slice_from_postgres2(self.server_conn,self.server_conn['tables']['averaged_cell_meta'],
+                #utilities.remove_slice_from_postgres2(self.server_conn,self.server_conn['tables']['averaged_cell_meta'],
+                utilities.remove_averaged_data(self.server_conn,self.server_conn['tables']['averaged_cell_meta'],
                                                      segment_id = seg_id,
                                                      LAC = LAC,
                                                      CID = CID,
                                                      MNC = MNC,
-                                                     NetworkGen = NetGen
+                                                     NetworkGen = NetGen,
+                                                     city = self.city
                                                      )
                 interp_df = pd.DataFrame()
                 _cell_gr = cell_gr.sort_values(by = ['ratio'])
@@ -228,8 +235,56 @@ class Averaging():
                 else:
                     print "Segment = ",seg_id ," does not exist at the city = ",self.city
 
+    def push_deriviative_type(self,df):
+        grouped_segments = df.groupby(['segment_id'])
+        for seg_id,seg_gr in grouped_segments:
+            lc_grouped = seg_gr.groupby(['LAC','CID'])
+            for (LAC,CID),lc_gr in lc_grouped:
+                utilities.remove_dervs_from_postgres(self.server_conn,self.server_conn['tables']['deriviative_types'],
+                                                     segment_id = seg_id,
+                                                     LAC = LAC,
+                                                     CID = CID,
+                                                     city = self.city
+                                                     )
+
+                lc_gr = lc_gr[['ratio','Power']]
+                diffs = lc_gr.diff(1,0)
+                dervs = (diffs['Power']/diffs['ratio']).apply(np.arctan)
+                dervs = pd.DataFrame(dervs)
+                dervs.columns = ['d']
+                dervs = dervs[~dervs['d'].isnull()]
+                trend0 = self.settrend(dervs.iloc[0]['d'])
+                ratio_from = lc_gr.iloc[0]['ratio']
+
+                for i,row in dervs.iterrows():
+
+                    trend = self.settrend(row['d'])
+                    if (trend!= trend0)|(i==len(dervs)):
+                        #todo: i+-1
+                        ratio_to = lc_gr[lc_gr.index == i]['ratio'][i]
+                        data = {'segment_id':[seg_id],'LAC':[LAC],'CID':[CID],'ratio_from':[ratio_from],'ratio_to':[ratio_to],'dertype':[trend0],'city':[self.city]}
+                        fr = pd.DataFrame.from_dict(data)
+                        utilities.insert_pd_to_postgres(fr,self.server_conn,self.server_conn['tables']['deriviative_types'])
+                        trend0 = trend
+                        ratio_from = ratio_to
 
 
+
+        return
+    def settrend(self,derv):
+        if derv>=0:
+            trend = 0
+        else:
+            trend = 1
+        #if derv>=variables.DERVSBOUNDS['l']:
+        #    trend = 1
+        #if (derv<variables.DERVSBOUNDS['l'])&(derv>=0):
+        #    trend = 2
+        #if (derv>=variables.DERVSBOUNDS['r'])&(derv<0):
+        #    trend = 3
+        #if derv<variables.DERVSBOUNDS['r']:
+        #    trend = 4
+        return trend
     def distToTimeRatio(self,distDf,timeDf,toTime = False):
         """
         Translate distance ratios to the time ratios
@@ -257,6 +312,7 @@ class Averaging():
                 newDf['Power'] = np.interp(newDf['ratio'].astype(np.float),gr['ratio'].astype(np.float),gr['Power'].astype(np.float))
                 LCDF = pd.concat([LCDF,newDf])
         return LCDF
+
     def splitByTimeStep(self,pathTime,step = 1):
         """
         Split dataframe by equal time steps
@@ -322,8 +378,8 @@ class Averaging():
             line_wkt = utilities.wkbpts_to_wkbline(list(_mnc_gr['geom']),wkt=True)
             lc_row = _mnc_gr[['segment_id','NetworkGen','MNC','city','NetworkGen','quality','NumUsers','NumRaces']].iloc[0]
             lc_row['geom'] = line_wkt
-            utilities.remove_slice_from_postgres2(self.server_conn, self.server_conn['tables']['subway_cell_quality'],
-                                                          segment_id = [lc_row['segment_id']],
+            utilities.remove_subway_quality_from_postgres(self.server_conn, self.server_conn['tables']['subway_cell_grabbing_quality'],
+                                                          segment_id = lc_row['segment_id'],
                                                           city = lc_row['city'],
                                                           MNC = lc_row['MNC'],
                                                           NetworkGen = lc_row['NetworkGen']
@@ -333,11 +389,22 @@ class Averaging():
         conn.close()
     def push_cell_quality(self,pts_df):
         print "Init push_cell_quality"
+        base_delta_ratio = None
         conn = psycopg2.connect(self.connString)
         conn.rollback()
         cur = conn.cursor()
         sql = """INSERT INTO """ + self.server_conn['tables']['subway_cell_quality'] + """(segment_id,"NetworkGen","MNC",geom,cell_num,city)
         VALUES(%(segment_id)s,%(NetworkGen)s,%(MNC)s,ST_GeomFromText(%(geom)s,3857),%(cell_num)s,%(city)s)"""
+
+        for i,row in pts_df.iterrows():
+            if base_delta_ratio:
+                if row['ratio']!=ratio_from:
+                    base_delta_ratio = row['ratio'] - ratio_from
+                    break
+            if not base_delta_ratio:
+                ratio_from = row['ratio']
+                base_delta_ratio = -1
+
 
         pdlines_df = pd.DataFrame()
         pts_df['id_from'] = pts_df['segment_id'].apply(lambda x : x.split('-')[0])
@@ -363,18 +430,17 @@ class Averaging():
             last_ratio = qua_pts_gr['ratio'].iloc[0]
             ratio_split = False
             for i,row in _qua_pts_gr.iterrows():
-                if row['MNC'] =='99':
-                    pass
                 if prev_cell_num == row['cell_num']:
-                    # todo: experement
+                    # todo: experiment
                     delta_ratio = row['ratio']-last_ratio
                     # print last_ratio,row['ratio'],delta_ratio
-                    if delta_ratio< 0.2:
+
+                    if round(delta_ratio - base_delta_ratio)<=0:
                         cell_gr = pd.concat([cell_gr,pd.DataFrame(row).transpose()])
                         prev_cell_num = row['cell_num']
                         last_ratio = row['ratio']
                     else:
-                        print "High delta ratio!",delta_ratio,row['MNC']
+                        print "High delta ratio!", delta_ratio, row['MNC']
                         ratio_split = True
                 if (prev_cell_num!=row['cell_num'])or(i == _qua_pts_gr.last_valid_index())or(ratio_split):
                     if len(cell_gr)>1:
@@ -384,8 +450,8 @@ class Averaging():
                         lc_row['geom'] = line_wkt
                         lc_row['srid'] = '3857'
 
-                        utilities.remove_slice_from_postgres2(self.server_conn, self.server_conn['tables']['subway_cell_quality'],
-                                                              segment_id = [lc_row['segment_id']],
+                        utilities.remove_subway_quality_from_postgres(self.server_conn, self.server_conn['tables']['subway_cell_quality'],
+                                                              segment_id = lc_row['segment_id'],
                                                               city = lc_row['city'],
                                                               MNC = lc_row['MNC'],
                                                               NetworkGen = lc_row['NetworkGen']

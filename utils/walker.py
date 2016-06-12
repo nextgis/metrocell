@@ -60,7 +60,7 @@ def walker(aver):
                             fname = '/'.join(l)
                             l2 = L[session_ix+1:session_ix+3]
                             fname_full = '/'.join(l2)
-                            if fname_full in list(existed_Df):
+                            if fname_full in list(existed_Df['zip_basename']):
                                 ex_zip_id = existed_Df[existed_Df['zip_basename'] == fname_full].index[0]
 
                                 if ex_zip_id in indexes:
@@ -104,5 +104,5 @@ def walker(aver):
     #log_file.close()
     return
 if __name__ =='__main__':
-    aver = False
+    aver = True
     walker(aver)

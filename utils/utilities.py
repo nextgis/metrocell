@@ -13,6 +13,7 @@ import pandas as pd
 import psycopg2
 from sqlalchemy import create_engine
 import subprocess
+import sqlite3
 
 def if_none_to_str(s):
     if s is None:
@@ -161,30 +162,6 @@ def compare_geoms(wkbs,wkb):
             break
     return res
 
-def execute_sql2(server,sql):
-    connString = "host = %s user = %s password = %s dbname = %s port = %s" % (server['host'],server['user'],server['password'],server['dbname'],server['postgres_port'])
-
-    conn = psycopg2.connect(connString)
-    conn.rollback()
-    cur = conn.cursor()
-    try:
-        cur.execute(sql)
-        conn.commit()
-    except:
-        print('oops!> resulting image insertion error!',sys.exc_info()[0],sys.exc_info()[1])
-
-def execute_sql(server,sql,data):
-    connString = "host = %s user = %s password = %s dbname = %s port = %s" % (server['host'],server['user'],server['password'],server['dbname'],server['postgres_port'])
-
-    conn = psycopg2.connect(connString)
-    conn.rollback()
-    cur = conn.cursor()
-    try:
-        cur.execute(sql,data)
-    except:
-        print('oops!>',sys.exc_info()[0],sys.exc_info()[1])
-    conn.commit()
-
 def insert_pd_to_postgres(fr,db_conn,table,if_exists = 'append',index=False,return_last_id = False):
     engine = create_engine('postgresql://%(user)s:%(password)s@%(host)s:%(postgres_port)s/%(dbname)s' % db_conn)
     try:
@@ -215,7 +192,7 @@ def update_postgre_rows(server,table,row_id,field,rows_val,index_col = 'id'):
     connString = "host = %s user = %s password = %s dbname = %s port = %s" % (server['host'],server['user'],server['password'],server['dbname'],server['postgres_port'])
     conn = psycopg2.connect(connString)
     if type(row_id) == tuple:
-        sql = "UPDASTE %s SET %s = %s WHERE %s in %s" % (table,field,rows_val,index_col,row_id)
+        sql = "UPDATE %s SET %s = %s WHERE %s in %s" % (table,field,rows_val,index_col,row_id)
     else:
         sql = "UPDATE %s SET %s=%s WHERE %s = %s"% (table,field,rows_val,index_col,row_id)
     cur = conn.cursor()
@@ -260,7 +237,7 @@ def get_pd_df_from_sql(db_conn,tab_name,index_col = 'id',**wheres):
     if wheres:
         sql +=" WHERE "
         for key in wheres:
-            sql +=" %s= '%s' AND"%(key,wheres[key])
+            sql +=" '%s'= '%s' AND"%(key,wheres[key])
     if sql[-3:] == 'AND':
         sql = sql[:-3]
     fr = pd.read_sql_query(sql,conn,index_col)
@@ -326,27 +303,71 @@ def remove_slice_from_postgres(db_conn,tabname,whereas_key,whereas_vals):
     cur = conn.cursor()
     for where in whereas_vals:
         sql = "DELETE FROM %s WHERE %s = '%s'"%(tabname,whereas_key, where)
-        try:
-            cur.execute(sql)
-            conn.commit()
-        except:
-            pass
+        #try:
+        cur.execute(sql)
+        conn.commit()
+#        except:
+ #           pass
     conn.close()
+    return
+def remove_averaged_data(db_conn,tabname,segment_id,LAC,CID,MNC,NetworkGen,city):
+    data = {'tabname':tabname,'segment_id':segment_id,'LAC':LAC,'CID':CID,'MNC':int(MNC),'NetworkGen':NetworkGen,'city':city}
+    connString = "host = %s user = %s password = %s dbname = %s" % (db_conn['host'],db_conn['user'],db_conn['password'],db_conn['dbname'])
+    conn = psycopg2.connect(connString)
+    conn.rollback()
+    cur = conn.cursor()
+    sql = """DELETE FROM """ + tabname  + """ WHERE 'LAC' = '%(LAC)s' AND 'CID' = '%(CID)s' AND segment_id = '%(segment_id)s' """ \
+          """AND 'NetworkGen' = '%(NetworkGen)s' AND "MNC" = %(MNC)i AND city = '%(city)s' """%data
+  #  try:
+    cur.execute(sql)
+    conn.commit()
+ #   except:
+   # print sys.exc_info()[0],sys.exc_info()[1]
+#        pass
+#    return
+def remove_subway_quality_from_postgres(db_conn,tabname,segment_id,city,MNC,NetworkGen):
+    data = {'tabname':tabname,'segment_id':segment_id,'MNC':MNC,'NetworkGen':NetworkGen,'city':city}
+    connString = "host = %s user = %s password = %s dbname = %s" % (db_conn['host'],db_conn['user'],db_conn['password'],db_conn['dbname'])
+    conn = psycopg2.connect(connString)
+    conn.rollback()
+    cur = conn.cursor()
+    sql = """DELETE FROM """ + tabname  + """ WHERE segment_id = '%(segment_id)s' """ \
+          """AND 'NetworkGen' = '%(NetworkGen)s' AND "MNC" = '%(MNC)s' AND city = '%(city)s' """%data
+  #  try:
+    cur.execute(sql)
+    conn.commit()
+ #   except:
+    #print sys.exc_info()[0],sys.exc_info()[1]
+
+    return
+def remove_dervs_from_postgres(db_conn,tabname,segment_id,LAC,CID,city):
+    data = {'tabname':tabname,'segment_id':segment_id,'LAC':LAC,'CID':CID,'city':city}
+    connString = "host = %s user = %s password = %s dbname = %s" % (db_conn['host'],db_conn['user'],db_conn['password'],db_conn['dbname'])
+    conn = psycopg2.connect(connString)
+    conn.rollback()
+    cur = conn.cursor()
+    sql = """ DELETE FROM """+ tabname + """ WHERE "LAC" = '%(LAC)s' AND "CID" = '%(CID)s' AND "segment_id" = '%(segment_id)s' AND "city" = '%(city)s' """%data
+    #try:
+    cur.execute(sql)
+    conn.commit()
+    #except:
+     #   print sys.exc_info()[0],sys.exc_info()[1]
+      #  pass
     return
 def remove_slice_from_postgres2(db_conn,tabname,**whereas):
     connString = "host = %s user = %s password = %s dbname = %s" % (db_conn['host'],db_conn['user'],db_conn['password'],db_conn['dbname'])
     conn = psycopg2.connect(connString)
     conn.rollback()
     cur = conn.cursor()
-    sql_base = "DELETE FROM %s WHERE "%tabname
+    sql = "DELETE FROM %s WHERE "%tabname
     for key,val in whereas.iteritems():
-        sql = sql_base+" %s = %s AND "%(key, val)
+        sql = sql + """ "%s" = %s AND """%(key, val)
     sql = sql[:-4]
-    try:
-        cur.execute(sql)
-        conn.commit()
-    except:
-        pass
+   # try:
+    cur.execute(sql)
+    conn.commit()
+  #  except:
+  #      pass
     conn.close()
     return
 def interpolate_averaged_points(db_conn,lines_table,averaged_pts_table,step=40):
@@ -389,7 +410,7 @@ def interpolate_averaged_points(db_conn,lines_table,averaged_pts_table,step=40):
     return
 def plot_signal_power(db_conn,plot_func,id_from,id_to,city):
     #try:
-
+    DEVNULL = open(os.devnull, 'wb')
     if db_conn['password'] is None:
         password = ''
     else:
@@ -398,7 +419,7 @@ def plot_signal_power(db_conn,plot_func,id_from,id_to,city):
             "Rscript",variables.r_plot_pars['scripts_fld']+'/plot_georeferenced.R',plot_func,
              db_conn['host'],str(db_conn['postgres_port']),db_conn['user'],password,db_conn['dbname'],str(id_from),str(id_to),city
             ],
-        stdout=subprocess.PIPE
+        stdout=DEVNULL
     )
     output = ps.communicate()[0]
     print output
@@ -420,3 +441,4 @@ def wkbpts_to_wkbline(wkb_pts,wkt=False):
         return line.wkb_hex
     else:
         return line.wkt
+

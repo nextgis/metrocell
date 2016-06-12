@@ -129,7 +129,8 @@ class Preproc():
         :return:
         """
         grouped = self.df.groupby(['NetworkGen','MNC','MCC','race_id','User'])
-        self.df = grouped.filter(lambda x: len(np.unique(x['Power']))>1)
+        self.df = grouped.filter(lambda x: np.std(x['Power'])>variables.averaged_cell_pars['constantstd'])
+        #self.df = grouped.filter(lambda x: len(np.unique(x['Power']))>1)
         return self.df
 if __name__ == "__main__":
     pass

@@ -24,7 +24,8 @@ TABLES ={'averaged_cell_meta':'averaged_cell_meta',
          'averaged_geo':'averaged_geo',
          'segment_quality':'segment_quality',
          'subway_cell_quality':'subway_cell_quality',
-         'subway_cell_grabbing_quality':'subway_cell_grabbing_quality'
+         'subway_cell_grabbing_quality':'subway_cell_grabbing_quality',
+         'deriviative_types':'deriviative_types'
 
               }
 # the only one server could contain 'main' : True
@@ -84,7 +85,6 @@ r_plot_pars = {
     'scripts_fld':METROCELL_BASE + '/code/utils/stats',
     'out_fld': METROCELL_BASE + '/data/plots'
 }
-
 averaged_cell_pars = {'nNeighbors':50,  # the number of neighbours (for kNeighbours method of averaging)
                       'testsize' : 0.4, # percent of testing data for kNeighbours classifieer
                       'minData':15,     # the minimum number of rows for collected LACCID as input parameter (for kNeighbours method of averaging)
@@ -115,8 +115,19 @@ averaged_cell_pars = {'nNeighbors':50,  # the number of neighbours (for kNeighbo
 
                       'minNoise': 0.3,
 
-                      'default_quality':0
+                      'default_quality':0,
 
+                      'constantstd':4,
+                      'poly1':0.1,
+                      'poly2':0.1,
+                      'posit':0.00001
                       }
 
+SQLITEDBPATH = METROCELL_BASE + '/data/metrocell.db'
+OUTCSVPATH = METROCELL_BASE + '/data/mathpositioning.csv'
+DERVSBOUNDS = \
+    {
+        'l':0.1,
+        'r':-0.1
+    }
 
