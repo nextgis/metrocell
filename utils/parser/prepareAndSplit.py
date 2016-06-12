@@ -154,8 +154,8 @@ class PrepareAndSplit():
                 _sectionFrameUpdated = utilities.dropMultipleCols(typeDf, self.moveTypes+['Name'])
                 _sectionFrameUpdated.rename(columns = {'ID':'station_id'},inplace=True)
                 _sectionFrameUpdated['move_type'] = moveType
-                _sectionFrameUpdated['id_from'] = Ids['from']
-                _sectionFrameUpdated['id_to'] = Ids['to']
+                _sectionFrameUpdated['id_from'] = Ids['from'].zfill(3)
+                _sectionFrameUpdated['id_to'] = Ids['to'].zfill(3)
                 _sectionFrameUpdated = utilities.dropMultipleCols(_sectionFrameUpdated,variables.excluded_meta_cols + ['session_id'])
                 _sectionFrameUpdated['city'] = self.city
                 #_sectionFrameUpdated = utilities.floatToInt(_sectionFrameUpdated, ['race_id'])

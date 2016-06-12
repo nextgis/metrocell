@@ -2,7 +2,7 @@
 # coding=utf-8
 __author__ = 'sasfeat'
 
-import sys
+import sys,os
 import ogr
 import math
 import string
@@ -36,7 +36,8 @@ class Parsed_data(Base):
     city = Column(Text)
     move_type = Column(Text)
     zip_id = Column(Integer)
-    def __init__(self,id,TimeStamp,User,ratio,station_id,id_from,id_to,city,move_type,zip_id):
+    race_id = Column(Text)
+    def __init__(self,id,TimeStamp,User,ratio,station_id,id_from,id_to,city,move_type,zip_id,race_id):
 
         self.id = id
         self.TimeStamp = TimeStamp
@@ -48,6 +49,7 @@ class Parsed_data(Base):
         self.city = city
         self.move_type = move_type
         self.zip_id = zip_id
+        self.race_id = race_id
 
 class Geo_ref():
     """
@@ -77,6 +79,9 @@ class Geo_ref():
 
         print 'Georeferencer starts!'
         print 30*"-"
+
+
+
         # use sqlalchemy sessions to faster commiting of changes
         # look at https://ru.wikibooks.org/wiki/SQLAlchemy
         metrocell_engine = create_engine("postgresql://"+self.server_conn['user']+':'+utilities.if_none_to_str(self.server_conn['password'])+'@'+self.server_conn['host']+':'+ utilities.if_none_to_str(self.server_conn['postgres_port'])+'/' + self.server_conn['dbname'])
@@ -94,30 +99,31 @@ class Geo_ref():
             parsed_zip_df = parsed_df[parsed_df['zip_id'].isin(self.zip_ids)]
             _parsed_zip_df = parsed_zip_df.sort_values(by = ['TimeStamp'])
             _parsed_zip_df = _parsed_zip_df[parsed_zip_df['ratio'].isnull()]
-            segment_slices = _parsed_zip_df.groupby(['id_from','id_to','User','move_type'])
+            segment_slices = _parsed_zip_df.groupby(['id_from','id_to','User','move_type','race_id'])
             self.proc_len = len(parsed_zip_df)
             self.step = 0
             # iterate thtough the groups
-            for (id_from,id_to,User,move_type),segment_df in segment_slices:
+            for (id_from,id_to,User,move_type,race_id),segment_df in segment_slices:
                 self.id_from = id_from
                 self.id_to = id_to
                 self.device = device
+                self.race_id = race_id
                 self.key_rows = segment_df[segment_df['station_id'].notnull()]
-
+                # todo:ratio = None надо поменять
                 _segment_df = self.session.query(Parsed_data)\
-                    .filter_by(id_from = id_from,id_to=id_to,User = User,move_type = move_type,ratio = None)\
+                    .filter_by(id_from = id_from,id_to=id_to,User = User,move_type = move_type, race_id = race_id)\
                     .order_by(Parsed_data.TimeStamp.asc())
                 if move_type == 'inter':
                     self.step+=1
                     #todo: no algorithm to reference interchanges!
                     continue
                 segment_graph = str(id_from).zfill(3) + '-' + str(id_to).zfill(3)
-                try:
-                    self.segment_georef(segment_graph,_segment_df, self.extractor)
-                except:
-                    self.step+=1
-                    print sys.exc_info()[0],sys.exc_info()[1]
-                    continue
+                #try:
+                self.segment_georef(segment_graph,_segment_df, self.extractor)
+                #except:
+                   # self.step+=1
+                   # print sys.exc_info()[0],sys.exc_info()[1]
+                   # continue
                 if move_type == 'move':
                     utilities.plot_signal_power(self.server_conn,'georeferencing_raw',id_from,id_to,self.city)
 
@@ -140,7 +146,10 @@ class Geo_ref():
         psycopg_conn.rollback()
         sql_georef_insert = """INSERT INTO """ + self.server_conn['tables']['georeferenced']  + """ (geom,ratio,id_from,id_to,city,zip_id) VALUES(ST_SetSRID(%(geom)s::geometry,%(srid)s),%(ratio)s,%(id_from)s,%(id_to)s,%(city)s,%(zip_id)s)"""
 
-        move_type = segment_slice_fr.first().move_type
+        try:
+            move_type = segment_slice_fr.first().move_type
+        except:
+            pass
         if move_type == 'move':
             filter_query = "code = '%s' AND city = '%s'"% (segment_graph,self.city)
             conn = ogr.Open("PG:"+self.connString)
