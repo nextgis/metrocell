@@ -6,15 +6,18 @@ import variables
 import utilities
 
 # additional libs
-import pandas as pd
+#import pandas as pd
 from argparse import ArgumentParser
 
 def main():
 
     arg_parser = ArgumentParser(description="Database migrator")
-    arg_parser.add_argument('-t', '--tables',type=str,nargs = '+',help = 'List of tables to migrate')
-
+    arg_parser.add_argument('-t', '--tables',type=str,nargs = '+',required = True, help = 'List of tables to migrate')
+    arg_parser.add_argument('-c', '--city', type = str,required = True, help = 'City')
     args = arg_parser.parse_args()
+    global CITY
+    CITY = args.city
+
     db_conn_pars = variables.DB_CONN[[hostname for hostname in variables.DB_CONN.keys() if variables.DB_CONN[hostname]['main']][0]]
     postgre_to_sqlite(db_conn_pars,args.tables)
     return arg_parser
