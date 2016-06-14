@@ -128,7 +128,8 @@ class Preproc():
         avoid situations when signal is constant on exact segment in exact race for exact user
         :return:
         """
-        grouped = self.df.groupby(['NetworkGen','MNC','MCC','race_id','User'])
+        # todo:check
+        grouped = self.df.groupby(['NetworkGen','MNC','MCC','LAC','CID','race_id','User','Active'])
         self.df = grouped.filter(lambda x: np.std(x['Power'])>variables.averaged_cell_pars['constantstd'])
         #self.df = grouped.filter(lambda x: len(np.unique(x['Power']))>1)
         return self.df
