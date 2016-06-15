@@ -27,195 +27,108 @@ import variables,utilities
 
 def main():
     parser = ArgumentParser('Subway lines positioning prototype')
-    parser.add_argument('-c','--city', choices=variables.CITIES, help = 'Город, в котором находится пользователь')
-    parser.add_argument('-t','--timeslice',type = int,help = 'Врем, которое необходимо для сбора одного сегмента данных (ед.изм.: мсек)')
+    parser.add_argument('-c','--city',type = str,required = True, choices=variables.CITIES, help = 'Город, в котором находится пользователь')
+    parser.add_argument('-t','--timeslice',type = int,required = True,help = 'Время, которое необходимо для сбора одного сегмента данных (ед.изм.: мсек)')
+    parser.add_argument('-d','--onlinedatapath',type=str,help='Модель данных, поступающих в систему в режиме онлайн(путь до файла)')
+    parser.add_argument('-s','--startstamp',type=int,required = True,help='Момент запуска приложения')
+    parser.add_argument('-f','--finishstamp',type=int,required = True,help='Момент прибытия в станцию назначения')
     args = parser.parse_args()
-    global CITY
-    CITY = args.city
-    global TIMESLICE
-    TIMESLICE = args.timeslice
-    global ERRORS
-    ERRORS = {'segmentend':"Нет данных по перегону в городе с id = %s, собранных пользователем в некоторый заезд!"%CITY,
-              'noactive':"Нет активных вышек!"
-              }
+    localize(args.startstamp, args.finishstamp,args.city,args.timeslice,args.onlinedatapath)
     # параметры для наборов данных:
     # коэффициенты кривой
     # характер кривой в начале, середине и конце(возрастает, убывает или примерно 0)
     # значения производной в начале, середине и конце [-1;1]
-    samples = \
-        {
-            1:{
-                'pars':{},
-                    #{
-                    #    'coeffs':None,
-                    #    'dertrend':None,
-                    #    'dervalue':None
-                    #},
-                'rawdata':pd.DataFrame(),
-                'predicteddata':pd.DataFrame(),
-                'predictedsegments':pd.DataFrame()
-        },
-            2:{
-                'pars':
-                    {
-                        #'coeffs':None,
-                        #'dertrend':None,
-                        #'dervalue':None
-                    },
-                'rawdata':pd.DataFrame(),
-                'predicteddata':pd.DataFrame(),
-                'predictedsegments':pd.DataFrame()
-            },
-            3:{
-                'pars':
-                    {
-                        #'coeffs':None,
-                        #'dertrend':None,
-                        #'dervalue':None
-                    },
-                'rawdata':pd.DataFrame(),
-                'predicteddata':pd.DataFrame(),
-                'predictedsegments':pd.DataFrame()
-            }
-        }
+def localize(startstamp,finishstamp,city='spb',timeslice=20000,
+             onlinedatapath = None,user = None,race_id = None):
 
+    global CITY
+    CITY = city
+    global TIMESLICE
+    TIMESLICE = timeslice
+    #global ERRORS
+    #ERRORS = {'segmentend':"Нет данных по перегону в городе с id = %s, собранных пользователем в некоторый заезд!"%CITY,
+    #          'noactive':"Нет активных вышек!"
+    #          }
 
-    #testsegment_id = None
     db_conn = variables.DB_CONN[[hostname for hostname in variables.DB_CONN.keys() if variables.DB_CONN[hostname]['main']][0]]
-    testsegments = segment_cellnum_more_two_generator(db_conn=db_conn)
-    subway_info = utilities.get_pd_df_from_sql(db_conn,variables.TABLES['subway_info'],'id')
     lines_info = utilities.get_pd_df_from_sql(db_conn,variables.TABLES['lines'],'ogc_fid')
-    startratio = 0
-    numiterations = 50
-    global DELTARATIO
-    DELTARATIO = 0.15
-    #user = 'natalie'
-    user = None
-    outpath = variables.OUTCSVPATH
-
     check_frame = pd.DataFrame()
-    segmentslength = len(testsegments)
-    i=0
-    #testsegments = ['049-048']
-    for testsegment_id in testsegments:
-        i+=1
-        sys.stdout.write(str(i) + '/' + str(segmentslength) + '\n')
-        sys.stdout.flush()
-        last_slice_point = None
-        segment_position = {
-                'id':False,     #перегон
-                'part':False,   # часть перегона(начало|середина|конец)
-                'point':False   # точка на перегоне
-            }
-        #testsegment_id = testsegments.sample(1)['segment_id'].iloc[0]
-        segment_id, point = None, None
-        #check = pd.DataFrame({'point':[None],'point_dist':[None],'segment_id':[None],'time':[None]})
-        check = pd.DataFrame({'b':[None],'time':[None],'dist_error':[None],'segment':[testsegment_id]})
-        usermoves = True
-        start_ratio,segment_fr,true_segment = rawdata_generator(segment_id=testsegment_id,ratio=startratio,user = user)
-        #segment_fr = segment_fr.sort_values(by = ['TimeStamp'])
-        segment_fr = segment_fr.sort_values(by = ['ratio'])
-        segment_fr = segment_fr.set_index([range(0,len(segment_fr))])
-        start_ix = segment_fr[(segment_fr['ratio'] == start_ratio)].index[0]
-        # последняя точка на перегоне
-        # пока не будет получена окончательная координата объекта,
-        # сбор данных не прекращать
-        iter = 0
-        while(segment_position['part'] == False)and(usermoves == True):
-            iter+=1
-            samples[1]['rawdata'] = rawslice_generator(start_ix,segment_fr)
-            # забираем слайс данных в TIMESTAMP секунд
+
+    last_slice_point = None
+    segment_position = {
+            'id':False,     #перегон
+            'part':False,   # часть перегона(начало|середина|конец)
+            'point':False   # точка на перегоне
+        }
+    #testsegment_id = testsegments.sample(1)['segment_id'].iloc[0]
+    segment_id, point = None, None
+    usermoves = True
+    #if segment_data!=None:
+    #start_ratio,segment_fr,true_segment = get_rawdata_by_race(db_conn,CITY,segment_data['race_id'],segment_data['user'])
+    if onlinedatapath!=None or (user!=None and race_id!=None):
+        segment_fr = get_online_data_since_timestamp(startstamp,finishstamp,onlinedatapath,user,race_id)
 
 
-            if samples[1]['rawdata'].empty:
-                usermoves = False
-            else:
-            #if not samples[1]['rawdata'].empty:
-                # проверяем, забрали ли мы чего-нибудь
-                # генерируем все возможные участки-местоположения из n1
-                #samples[1]['predicteddata'] = possible_location(samples[1]['rawdata'])
-                # если возможно местоположение хотя бы на одном перегоне - идем дальше
-                #if not samples[1]['predicteddata'].empty:
-                    # генерируем новый сегмент данных, начиная с последней точки предыдущего сегмента
-                    #start_ix = samples[1]['rawdata'].last_valid_index()
-                    #samples[2]['rawdata'] = rawslice_generator(start_ix,segment_fr)
-                    # если сегмент был сгенерирован(может быть None в случае если данные закончились)
-                    #if not samples[2]['rawdata'].empty:
-                        #samples[2]['predicteddata'] = possible_location(samples[2]['rawdata'])
-                        #if not samples[2]['predicteddata'].empty:
-                            #samples[3]['rawdata'] = pd.concat([samples[1]['rawdata'],samples[2]['rawdata']])
-                            #samples[3]['predicteddata'] = possible_location(samples[3]['rawdata'])
-                            # вычисляем параметры кривых n1, n2 и 2n и
-                            # находим области пересечения(независимо в пределах одного перегона)
-                            #print 'sample n1:\n'
-                            last_slice_point = samples[1]['rawdata']['ratio'].iloc[-1]
-                            samples[1]['pars'] = approximate(samples[1]['rawdata'])
-
-                            #print 'sample n2:\n'
-                            #samples[2]['pars'] = approximate(samples[2]['rawdata'])
-                            #samples[2]['predictedsegments'] = possible_location_on_segment(samples[2]['predicteddata'],samples[2]['pars'])
-                            #print 'sample 2n:\n'
-                            #samples[3]['pars'] = approximate(samples[3]['rawdata'])
-                            #samples[3]['predictedsegments'] = possible_location_on_segment(samples[3]['predicteddata'],samples[3]['pars'])
-                            # если аппроксимация удалась(в первом приближении если МНК сработал в приницпе)
-                            #if (samples[1]['pars']!={})&(samples[2]['pars']!={})&(samples[3]['pars']!={}):
-                            if (samples[1]['pars']!={}):
-
-                                samples[1]['predictedsegments'] = possible_location_on_segment(samples[1]['rawdata'],samples[1]['pars'])
-
-                                # сравниваем три набора сырых данных между собой
-                                #segment_id = check_part_prediction(samples)
-
-                                segment_ids = samples[1]['predictedsegments']
-                                #if not segment_ids.empty:
-                                 #   segment_ids = segment_ids[(segment_ids['ratio_to'] - segment_ids['ratio_from'])>DELTARATIO]
-                                if len(segment_ids) == 1:
-                                #if segment_id:
-                                    delta_ratio = np.abs(samples[1]['predictedsegments']['ratio_from'].iloc[0] - samples[1]['predictedsegments']['ratio_to'].iloc[0])
-                                    segment_id = list(segment_ids['segment_id'])[0]
-                                    print segment_id , true_segment
-                                    segment_position['part'] = True
-                                    # если хотя бы в одном наборе сегмент был определен
-                                    # проверяем, есть ли среди наборов точки потери/появления сигнала
-                                    # todo: или смены БС
-                                    #point = datacompare(samples[1]['pars'],samples[2]['pars'],samples[3]['pars'],segment_id)
-                                    #if point:
-                                        #print segment_id, point
-                                     #   segment_position['point'] = True
-                                else:
-                                    start_ix = samples[1]['rawdata'].last_valid_index()
-                                    lastslice = samples[1]['rawdata']
-                        #else:
-                          #  samples[1]['rawdata'] = samples[2]['rawdata']
-                    #else:
-                     #   start_ix = samples[1]['rawdata'].last_valid_index()
-                            else:
-                                start_ix = samples[1]['rawdata'].last_valid_index()
-        if last_slice_point:
-            try:
-                mean_segment_time = subway_info[(subway_info['segment_id'] == true_segment)&(subway_info['city'] == CITY)]['time_median'].iloc[0]
-            except:
-                continue
-            segment_length = lines_info[(lines_info['code'] == true_segment)&(lines_info['city'] == CITY)]['line_length'].iloc[0]
-            #delta_ratio = np.abs((last_slice_point - startratio))
-
-            check['time'] = np.abs((last_slice_point - startratio))*mean_segment_time
-            check['dist_error'] = delta_ratio/2*segment_length
-            print true_segment,segment_id,testsegment_id
-            if segment_id == true_segment:
-                check['segment_id'] = 1
-            #if point!=None:
-                #check['point'] = 1
-                #check['point_dist'] = np.abs(point - startratio)
+    #check = pd.DataFrame({'b':[None],'time':[None],'dist_error':[None],'segment':[true_segment]})
+    #else:
+     #   start_ratio,segment_fr,true_segment = rawdata_generator(segment_id=testsegment_id,ratio=startratio,user = user)
+    #segment_fr = segment_fr.sort_values(by = ['TimeStamp'])
+    segment_fr = segment_fr.sort_values(by = ['TimeStamp'])
+    segment_fr = segment_fr.set_index([range(0,len(segment_fr))])
+    start_ix = segment_fr.index[0]
+    #start_ix = segment_fr[(segment_fr['ratio'] == start_ratio)].index[0]
+    # последняя точка на перегоне
+    # пока не будет получена окончательная координата объекта,
+    # сбор данных не прекращать
+    iter = 0
+    while(segment_position['part'] == False)and(usermoves == True):
+        iter+=1
+        rawdata = rawslice_generator(start_ix,segment_fr,timeslice)
+        # забираем слайс данных в TIMESTAMP секунд
+        if rawdata.empty:
+            usermoves = False
         else:
-            pass
-        print '\n' , check
+            last_slice_point = rawdata['TimeStamp'].iloc[-1]
+            rawpars = approximate(rawdata)
+            if (rawpars!={}):
+                predictedsegments = possible_location_on_segment(rawdata,rawpars)
 
-        check_frame = pd.concat([check_frame,check])
 
-    print check_frame
-    check_frame = check_frame.set_index([range(0,len(check_frame))])
-    check_frame.to_csv(outpath)
+                if len(predictedsegments) == 1:
+                    delta_ratio = np.abs(predictedsegments['ratio_from'].iloc[0] - predictedsegments['ratio_to'].iloc[0])
+                    segment_id = list(predictedsegments['segment_id'])[0]
+                    # print segment_id , true_segment
+                    segment_position['part'] = True
+
+                else:
+                    print iter,predictedsegments
+                    start_ix = rawdata.last_valid_index()
+                    lastslice = rawdata
+
+            else:
+                start_ix = rawdata.last_valid_index()
+    if last_slice_point and segment_id:
+
+        segment_length = lines_info[(lines_info['code'] == segment_id)&(lines_info['city'] == CITY)]['line_length'].iloc[0]
+
+        time = (last_slice_point - startstamp)/1000
+        dist_error = delta_ratio/2*segment_length
+        print 'Вы на прегоне: ',segment_id,'\nВремя на позиционирование: ',time, 'сек\nРадиус ошибки в метрах: ',dist_error,'м'
+        return {'segment_id':[segment_id],'time':[time],'dist_error':[dist_error]}
+        #check['dist_error'] = delta_ratio/2*segment_length
+        #print true_segment,segment_id,testsegment_id
+        #if segment_id == true_segment:
+         #   check['segment_id'] = 1
+        #if point!=None:
+            #check['point'] = 1
+            #check['point_dist'] = np.abs(point - startratio)
+    else:
+        return {'segment_id':[None],'time':[None],'dist_error':[None]}
+    #print '\n' , check
+    #check_frame = pd.concat([check_frame,check])
+    #print check_frame
+    #check_frame = check_frame.set_index([range(0,len(check_frame))])
+    #check_frame.to_csv(outpath)
 
 def rawdata_generator(segment_id = None,ratio = None,user = None):
     """
@@ -267,7 +180,7 @@ def rawdata_generator(segment_id = None,ratio = None,user = None):
       #  pass
     return start_ratio,segment_fr,true_segment
 
-def rawslice_generator(startpoint_ix,segment_fr):
+def rawslice_generator(startpoint_ix,segment_fr,timeslice):
     """
     Извлекает кусок данных размера TIMESLICE, начиная с временной отсечки в startpoint
     :param startpoint_ix: индекс исходной точки {int}
@@ -282,17 +195,20 @@ def rawslice_generator(startpoint_ix,segment_fr):
 
     # забираем начальную временную отсечку
 
-    #startstamp = startpoint['TimeStamp']
-    startstamp = startpoint['ratio']
+    startstamp = startpoint['TimeStamp']
+    #startstamp = startpoint['ratio']
     # вычисляем конечную временную отсечку
-    finishstamp =  startstamp + DELTARATIO
+    finishstamp = startstamp + timeslice
+    #finishstamp =  startstamp + DELTARATIO
+
     # отсекаем лишнее от перегона(нужно только то, что после startstamp)
     segment_fr = segment_fr[segment_fr.index>=startpoint_ix]
     finish_ix = None
     # извлекаем кусок данных
     # lastindex = segment_fr.last_valid_index()
     for i,row in segment_fr.iterrows():
-        if (row['ratio']>finishstamp):
+        #if (row['ratio']>finishstamp):
+        if (row['TimeStamp']>finishstamp):
             finish_ix = i
             break
 
@@ -357,8 +273,8 @@ def approximate(rawdata,rank = 1):
     lc_grouped = rawdata.groupby(['LAC','CID'])
     approxed = {}
     for (LAC,CID),lc_gr in lc_grouped:
-        #t = np.array(lc_gr['TimeStamp'])
-        t = np.array(lc_gr['ratio'])
+        t = np.array(lc_gr['TimeStamp'])
+        #t = np.array(lc_gr['ratio'])
         y = np.array(lc_gr['Power'])
         coef = np.polyfit(t,y,rank,full = True)
         control = variables.averaged_cell_pars['posit']
@@ -437,16 +353,19 @@ def check_interesection(fr):
     """
     intersected_pt = None
     lc_from_ix,lc_to_ix = None,None
-    fr['laccid'] = fr['LAC'] + '-' + fr['CID']
-    intersected_pts = pd.DataFrame(columns = ['from','to','ratio'])
+    fr['laccid'] = fr['LAC'].astype(str) + '-' + fr['CID'].astype(str)
+    #intersected_pts = pd.DataFrame(columns = ['from','to','ratio'])
+    intersected_pts = {}
     alllaccids = list(set(list(fr['laccid'])))
     first_delta_power = None
-    fr_grouped = fr.groupby(['ratio'])
+    #fr_grouped = fr.groupby(['ratio'])
+    fr_grouped = fr.groupby(['TimeStamp'])
     # перебираем все возможные сочетания вышек
+    i=0
     for laccids_set in itertools.combinations(alllaccids,2):
 
         # определяем, пересекается ли пара
-        for ratio,fr_gr in fr_grouped:
+        for stamp,fr_gr in fr_grouped:
             # определяем разницу в силе сигнала между станицями
             lc_from = fr_gr[fr_gr['laccid'] == laccids_set[0]]
             lc_to = fr_gr[fr_gr['laccid'] == laccids_set[1]]
@@ -477,14 +396,17 @@ def check_interesection(fr):
                         ((str(delta_power)[0] == '-')&(first_dp_mark!='-')):
                     #intersected_pt = pd.DataFrame({'from':[lc_from_ix],'to':[lc_to_ix],'ratio':[ratio]})
                     #intersected_pts = intersected_pts.append(intersected_pt,ignore_index = True)
-                    intersected_pt = {'from':lc_from_ix,'to':lc_to_ix,'ratio':ratio}
+                    #intersected_pt = {'from':lc_from_ix,'to':lc_to_ix,'ratio':ratio}
+                    i+=1
+                    intersected_pt = {'from':lc_from_ix,'to':lc_to_ix,'stamp':stamp}
+                    intersected_pts[i] = intersected_pt
                     lc_from_ix = None
                     lc_to_ix = None
                     break
 
 
     #return intersected_pts
-    return intersected_pt
+    return intersected_pts
 def find_intersection_in_db(predicted_seg_parts2,intersected_pt):
 
     fpt_intersected_pts = pd.DataFrame()
@@ -552,8 +474,8 @@ def possible_location_on_segment(predicted_data,deriviatives):
     :return:
     """
     # точка пересечения двух сигналов
-    intersected_pt = check_interesection(predicted_data)
-    control_positions = {}
+    intersected_pts = check_interesection(predicted_data)
+    control_positions = pd.DataFrame()
 
     raw_laccids = []
     predicted_seg_parts = pd.DataFrame()
@@ -564,7 +486,7 @@ def possible_location_on_segment(predicted_data,deriviatives):
     #cur = conn.cursor()
     # достаем все laccid из он-лайн данных
     for s in deriviatives.keys():
-        laccid = s[0] + '-' + s[1]
+        laccid =str(s[0]) + '-' + str(s[1])
         raw_laccids.append(laccid)
     # достаем из базы все участки где наблюдается та же картина отдельно по всем LAC CID
     for (LAC,CID),dertype in deriviatives.iteritems():
@@ -581,12 +503,25 @@ def possible_location_on_segment(predicted_data,deriviatives):
         pred_laccids = predicted_seg_parts.groupby(['segment_id'])['laccid'].apply(np.unique)
         # ищем пересечения областей из выборок между БС и соседними
         # работаем внутри пергеона и проверяем, есть ли в нем удовлетворяющие условия
-
+        min_percentage = 100
         filtered_segments = []
-        for segment_id, laccids in pred_laccids.iteritems():
-            if set(raw_laccids).issubset(set(laccids)):
-                filtered_segments.append(segment_id)
 
+        for segment_id, laccids in pred_laccids.iteritems():
+            num_lc=0
+            for lc in laccids:
+                if lc in raw_laccids:
+                    num_lc+=1
+            if num_lc!=0:
+                cur_percentage = abs(len(set(raw_laccids))-num_lc)
+
+                if cur_percentage<min_percentage:
+                    min_percentage = cur_percentage
+                    filtered_segments = [segment_id]
+                if cur_percentage==min_percentage:
+                    filtered_segments.append(segment_id)
+                #if set(raw_laccids).issubset(set(laccids)):
+                 #   filtered_segments.append(segment_id)
+        filtered_segments = list(set(filtered_segments))
         predicted_seg_parts = predicted_seg_parts[predicted_seg_parts['segment_id'].isin(filtered_segments)]
         predicted_groupes = predicted_seg_parts.groupby(['segment_id'])
         # проверяем пересекаются ли сигналы от выбранных laccid
@@ -601,12 +536,14 @@ def possible_location_on_segment(predicted_data,deriviatives):
                 pred_seg_part = pd.DataFrame({'segment_id':[seg_id],'ratio_from':[interval[0]],'ratio_to':[interval[1]]})
                 predicted_seg_parts2 = pd.concat([predicted_seg_parts2,pred_seg_part])
 
-        if intersected_pt:
-            control_positions = find_intersection_in_db(predicted_seg_parts2,intersected_pt)
-            if not control_positions.empty:
-                #predicted_seg_parts2 = predicted_seg_parts2[predicted_seg_parts2['segment_id'] == min(control_positions, key=control_positions.get)]
-                predicted_seg_parts2 = control_positions
-
+        if intersected_pts!={}:
+            for pt in intersected_pts:
+                control_position = find_intersection_in_db(predicted_seg_parts2,intersected_pts[pt])
+                if not control_position.empty:
+                    #predicted_seg_parts2 = predicted_seg_parts2[predicted_seg_parts2['segment_id'] == min(control_positions, key=control_positions.get)]
+                    control_positions = control_positions.append(control_position)
+        if len(control_positions)==1:
+            predicted_seg_parts2 = control_positions
 
         #for i,row in predicted_seg_parts2.iterrows():
         #    sql = """ SELECT * FROM deriviative_types WHERE segment_id = '%(segment_id)s' AND city = '%(city)s'"""\
@@ -644,6 +581,27 @@ def get_pd_df_from_sql(db_conn,city,NetworkGen,MNC):
     sql = """SELECT * FROM averaged_cell_meta WHERE "MNC" = %(MNC)s AND city = '%(city)s' AND "NetworkGen" = '%(NetworkGen)s'""" % data
     fr = pd.read_sql_query(sql,conn,'id')
     return fr
+def get_rawdata_by_race(db_conn,city,race_id,user):
+    connString = "host = %s user = %s password = %s dbname = %s" % (db_conn['host'],db_conn['user'],db_conn['password'],db_conn['dbname'])
+    conn = psycopg2.connect(connString)
+    conn.rollback()
+    data = {'user':user,'city':city,'race_id':race_id}
+    sql = """ SELECT * FROM parsed_cell WHERE
+                                "User" = '%(user)s' AND
+                                "race_id" = '%(race_id)s' AND
+                                "city" = '%(city)s' AND
+                                "move_type" = 'move'
+                                """%(data)
+    fr = pd.read_sql_query(sql,conn,'id')
+    fr['segment_id'] = fr['id_from'] + '-' +fr['id_to']
+    segments = set(fr['segment_id'])
+    if len(segments)==1:
+        true_segment = list(segments)[0]
+        start_ratio = fr['ratio'].iloc[0]
+        return start_ratio,fr,true_segment
+    else:
+        raise Exception
+
 def segment_cellnum_more_two_generator(db_conn):
     segmentslen = {}
     connString = "host = %s user = %s password = %s dbname = %s" % (db_conn['host'],db_conn['user'],db_conn['password'],db_conn['dbname'])
@@ -662,5 +620,21 @@ def segment_cellnum_more_two_generator(db_conn):
     print 'Percentage of important segments', 1.0*segmentslen['important']/segmentslen['all']*100
 
     return important_segments
+def get_online_data_since_timestamp(startstamp,finishstamp,onlinedatapath=None,user=None,race_id=None):
+
+    if onlinedatapath:
+        fr = pd.read_table(onlinedatapath,sep = ';')
+        fr = fr[(fr['TimeStamp']>startstamp)&(fr['TimeStamp']<finishstamp)]
+    elif user and race_id:
+        db_conn = variables.DB_CONN[[hostname for hostname in variables.DB_CONN.keys() if variables.DB_CONN[hostname]['main']][0]]
+        connString = "host = %s user = %s password = %s dbname = %s" % (db_conn['host'],db_conn['user'],db_conn['password'],db_conn['dbname'])
+        conn = psycopg2.connect(connString)
+        sql = """ SELECT * FROM parsed_cell WHERE "User" = '%(user)s' AND "race_id" = '%(race_id)s' """\
+              %{"user":user,"race_id":race_id}
+        fr = pd.read_sql_query(sql,conn,'id')
+        fr = fr[(fr['TimeStamp']>startstamp)&(fr['TimeStamp']<finishstamp)]
+    else:
+        raise Exception("Could not extract rawdata!")
+    return fr
 if __name__ == '__main__':
     main()
