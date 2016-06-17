@@ -124,7 +124,7 @@ averaged_cell_pars = {'nNeighbors':50,  # the number of neighbours (for kNeighbo
                       }
 
 SQLITEDBPATH = METROCELL_BASE + '/data/metrocell.db'
-OUTCSVPATH = METROCELL_BASE + '/data/mathpositioning.csv'
+OUTCSVPATH = METROCELL_BASE + '/data/mathpositioning_online.csv'
 DERVSBOUNDS = \
     {
         'l':0.1,

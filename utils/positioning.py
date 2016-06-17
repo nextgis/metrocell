@@ -38,7 +38,7 @@ def main():
     # коэффициенты кривой
     # характер кривой в начале, середине и конце(возрастает, убывает или примерно 0)
     # значения производной в начале, середине и конце [-1;1]
-def localize(startstamp,finishstamp,city='spb',timeslice=20000,
+def localize(startstamp,finishstamp,city='spb',timeslice=10000,
              onlinedatapath = None,user = None,race_id = None):
 
     global CITY
