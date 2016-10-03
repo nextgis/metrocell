@@ -316,8 +316,8 @@ def remove_averaged_data(db_conn,tabname,segment_id,LAC,CID,MNC,NetworkGen,city)
     conn = psycopg2.connect(connString)
     conn.rollback()
     cur = conn.cursor()
-    sql = """DELETE FROM """ + tabname  + """ WHERE 'LAC' = '%(LAC)s' AND 'CID' = '%(CID)s' AND segment_id = '%(segment_id)s' """ \
-          """AND 'NetworkGen' = '%(NetworkGen)s' AND "MNC" = %(MNC)i AND city = '%(city)s' """%data
+    sql = """DELETE FROM """ + tabname  + """ WHERE "LAC" = '%(LAC)s' AND "CID" = '%(CID)s' AND segment_id = '%(segment_id)s' """ \
+          """AND "NetworkGen" = '%(NetworkGen)s' AND "MNC" = %(MNC)i AND city = '%(city)s' """%data
   #  try:
     cur.execute(sql)
     conn.commit()

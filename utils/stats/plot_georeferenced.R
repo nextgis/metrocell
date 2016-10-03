@@ -93,7 +93,7 @@ georeferencing_raw<- function(host,port,user,password,dbname,plot_base,id_from,i
           
           mnc_df = gen_df[gen_df$MNC == MNC,]
           power<-ggplot(mnc_df,aes(x=ratio,y=Power,colour = laccid))+ggtitle(paste("Segment ",id_from,' - ',id_to, sep= ''))+theme(plot.title = element_text(face = 'bold'))
-          power2 = power +geom_line(size=1.5)+facet_grid(User~race_id)
+          power2 = power +geom_line(size=1.5,aes(linetype = Active))+facet_grid(User~race_id)
             
           plot_name = paste(id_from,'_',id_to,".png",sep = '')
           ggsave(filename = plot_name,plot = power2,path = plot_folder_mnc,width = 400,height = 400,units = 'mm')
